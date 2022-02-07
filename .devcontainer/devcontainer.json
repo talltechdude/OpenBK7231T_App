@@ -1,0 +1,14 @@
+{
+    "build": {"dockerfile": "Dockerfile"},
+    "extensions": [
+        "mhutchie.git-graph",
+        "eamodio.gitlens",
+        "oderwat.indent-rainbow",
+        "esbenp.prettier-vscode",
+        "2gua.rainbow-brackets",
+        "mechatroner.rainbow-csv",
+        "mitchdenny.ecdc",
+        "knisterpeter.vscode-commitizen",
+        "ms-vscode.cpptools"
+    ]
+}
