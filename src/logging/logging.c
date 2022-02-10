@@ -1,15 +1,54 @@
 
+// Trying to narrow down Boozeman crash.
+// Is the code with this define enabled crashing/freezing BK after few minutes for anybody?
+// #define DEBUG_USE_SIMPLE_LOGGER
+
+#ifdef DEBUG_USE_SIMPLE_LOGGER
+
+#include "../new_common.h"
+#include "../httpserver/new_http.h"
+#include "str_pub.h"
+
+SemaphoreHandle_t g_mutex = 0;
+static char tmp[1024];
+
+
+void addLog(char *fmt, ...){
+    va_list argList;
+    BaseType_t taken;
+
+	if(g_mutex == 0)
+	{
+		g_mutex = xSemaphoreCreateMutex( );
+	}
+	// TODO: semaphore
+
+    taken = xSemaphoreTake( g_mutex, 100 );
+    if (taken == pdTRUE) {
+
+		va_start(argList, fmt);
+		vsprintf(tmp, fmt, argList);
+		va_end(argList);
+		bk_printf(tmp);
+		bk_printf("\r");
+
+        xSemaphoreGive( g_mutex );
+    }
+}
+
+#else
+
 #include "../new_common.h"
 #include "../logging/logging.h"
 #include "../httpserver/new_http.h"
 #include "str_pub.h"
 
-static int http_getlog(const char *payload, char *outbuf, int outBufSize);
+static int http_getlog(http_request_t *request);
+static int http_getlograw(http_request_t *request);
 
 static void log_server_thread( beken_thread_arg_t arg );
 static void log_client_thread( beken_thread_arg_t arg );
 static void log_serial_thread( beken_thread_arg_t arg );
-
 
 static void startSerialLog();
 static void startLogServer();
@@ -32,13 +71,15 @@ static int initialised = 0;
 static char tmp[1024];
 
 static void initLog() {
-    bk_printf("init log\r\n");
+    bk_printf("Entering init log...\r\n");
     logMemory.head = logMemory.tailserial = logMemory.tailtcp = logMemory.tailhttp = 0; 
     logMemory.mutex = xSemaphoreCreateMutex( );
     initialised = 1;
     startSerialLog();
     startLogServer();
-    HTTP_RegisterCallback( "/logs", http_getlog);
+    HTTP_RegisterCallback( "/logs", HTTP_GET, http_getlog);
+    HTTP_RegisterCallback( "/lograw", HTTP_GET, http_getlograw);
+    bk_printf("Init log done!\r\n");
 }
 
 // adds a log to the log memory
@@ -254,31 +295,41 @@ static void log_serial_thread( beken_thread_arg_t arg )
 }
 
 
+static int http_getlograw(http_request_t *request){
+    http_setup(request, httpMimeTypeHTML);
+    int len = 0;
 
-static int http_getlog(const char *payload, char *outbuf, int outBufSize){
-    http_setup(outbuf, httpMimeTypeHTML);
-    strcat_safe(outbuf,htmlHeader,outBufSize);
-    strcat_safe(outbuf,htmlReturnToMenu,outBufSize);
+    // get log in small chunks, posting on http
+    do {
+        char buf[128];
+        len = getHttp(buf, 127);
+        buf[len] = '\0';
+        if (len){
+            poststr(request, buf);
+        }
+    } while (len);
+    poststr(request, NULL);
+    return 0;
+}
 
-    strcat_safe(outbuf, "<pre>",outBufSize);
+static int http_getlog(http_request_t *request){
+    http_setup(request, httpMimeTypeHTML);
+    poststr(request,htmlHeader);
+    poststr(request,htmlReturnToMenu);
+
+    poststr(request, "<pre>");
     char *post = "</pre>";
 
-    char *b = outbuf;
+    http_getlograw(request);
 
-    int len = strlen(b);
-    b += len;
-    outBufSize -= len;
+    poststr(request, post);
+    poststr(request, htmlEnd);
+    poststr(request, NULL);
 
-    int trailsize = strlen(htmlEnd) + strlen(post);
-    len = getHttp(b, outBufSize - trailsize - 1);
-    b += len;
-    outBufSize -= len;
-
-    strcat_safe(outbuf, post, outBufSize);
-    strcat_safe(outbuf,htmlEnd,outBufSize);
-
-    return strlen(outbuf);
+    return 0;
 }
 
 
 
+
+#endif
