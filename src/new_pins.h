@@ -1,5 +1,6 @@
 #ifndef __NEW_PINS_H__
 #define __NEW_PINS_H__
+#include "new_common.h"
 
 #define BIT_SET(PIN,N) (PIN |=  (1<<N))
 #define BIT_CLEAR(PIN,N) (PIN &= ~(1<<N))
@@ -19,6 +20,14 @@ enum IORole {
 	IOR_LED_WIFI_n,
 	IOR_Total_Options,
 };
+
+typedef struct pinsState_s {
+	byte roles[32];
+	byte channels[32];
+} pinsState_t;
+
+extern pinsState_t g_pins;
+
 
 #define GPIO_MAX 27
 #define CHANNEL_MAX 32
@@ -47,6 +56,7 @@ void Setup_Device_IntelligentLife_NF101A();
 void Setup_Device_TuyaLEDDimmerSingleChannel();
 void Setup_Device_CalexLEDDimmerFiveChannel();
 void Setup_Device_CalexPowerStrip_900018_1v1_0UK();
+void Setup_Device_ArlecCCTDownlight();
 
 #endif
 

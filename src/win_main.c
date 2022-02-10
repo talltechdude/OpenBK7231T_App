@@ -14,7 +14,7 @@
 #pragma comment (lib, "Ws2_32.lib")
 // #pragma comment (lib, "Mswsock.lib")
 
-#define DEFAULT_BUFLEN 8192
+#define DEFAULT_BUFLEN 16384
 #define DEFAULT_PORT "80"
 
 #include "new_common.h"
@@ -44,11 +44,17 @@ void strcat_safe_test(){
 	urldecode2_safe(buff,"qqqqqq%40qqqq",sizeof(buff));
 	urldecode2_safe(buff,"qqqqqq%40qqqq",sizeof(buff));
 }
+// placeholder - TODO
+char myIP[] = "127.0.0.1";
+char *getMyIp(){
+    return myIP;
+}
 
 int __cdecl main(void) 
 {
     WSADATA wsaData;
     int iResult;
+	int len;
 
     SOCKET ListenSocket = INVALID_SOCKET;
     SOCKET ClientSocket = INVALID_SOCKET;
@@ -69,6 +75,7 @@ int __cdecl main(void)
 
 	PIN_SetPinChannelForPinIndex(2,2);
 	PIN_SetPinRoleForPinIndex(2,IOR_PWM);
+    init_rest();
 
     // Initialize Winsock
     iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
@@ -137,21 +144,37 @@ int __cdecl main(void)
 
 			iResult = recv(ClientSocket, recvbuf, recvbuflen, 0);
 			if (iResult > 0) {
-				int leen;
-				HTTP_ProcessPacket(recvbuf,outbuf,sizeof(outbuf));
+				http_request_t request;
+				memset(&request, 0, sizeof(request));
 
-				printf("Bytes received: %d\n", iResult);
-				printf("%s\n",outbuf);
-				// Echo the buffer back to the sender
-				leen =  strlen(outbuf);
-				iSendResult = send( ClientSocket, outbuf,leen, 0 );
-				if (iSendResult == SOCKET_ERROR) {
-					printf("send failed with error: %d\n", WSAGetLastError());
-					closesocket(ClientSocket);
-					WSACleanup();
-					return 1;
+				recvbuf[iResult] = 0;
+
+				request.fd = ClientSocket;
+				request.received = recvbuf;
+				request.receivedLen = iResult;
+				outbuf[0] = '\0';
+				request.reply = outbuf;
+				request.replylen = 0;
+
+				request.replymaxlen = DEFAULT_BUFLEN;
+
+				printf("Bytes received: %d \n", iResult);
+				len = HTTP_ProcessPacket(&request);
+
+				if(len > 0) {
+					printf("Bytes rremaining tosend %d\n", len);
+					//printf("%s\n",outbuf);
+					// Echo the buffer back to the sender
+					//leen =  strlen(request.reply);
+					iSendResult = send( ClientSocket, outbuf,len, 0 );
+					if (iSendResult == SOCKET_ERROR) {
+						printf("send failed with error: %d\n", WSAGetLastError());
+						closesocket(ClientSocket);
+						WSACleanup();
+						return 1;
+					}
+					printf("Bytes sent: %d\n", iSendResult);
 				}
-				printf("Bytes sent: %d\n", iSendResult);
 			}
 			else if (iResult == 0)
 				printf("Connection closing...\n");
