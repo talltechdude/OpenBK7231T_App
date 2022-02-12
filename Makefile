@@ -39,6 +39,8 @@ sdk/apps/$(APP_NAME):
 .PHONY: build
 build: submodules sdk/apps/$(APP_NAME)
 	cd sdk/platforms/$(TARGET_PLATFORM)/toolchain/$(APPS_BUILD_PATH) && sh $(APPS_BUILD_CMD) $(APP_NAME) $(APP_VERSION) $(TARGET_PLATFORM)
+	rm sdk/platforms/$(TARGET_PLATFORM)/toolchain/$(APPS_BUILD_PATH)/tools/generate/$(APP_NAME)_*.rbl
+	rm sdk/platforms/$(TARGET_PLATFORM)/toolchain/$(APPS_BUILD_PATH)/tools/generate/$(APP_NAME)_*.bin
 
 # clean .o files
 .PHONY: clean
