@@ -1,3 +1,8 @@
+#if PLATFORM_XR809
+#define LWIP_COMPAT_SOCKETS 1
+#define LWIP_POSIX_SOCKETS_IO_NAMES 1
+#endif
+
 #include "../new_common.h"
 #include "ctype.h"
 #include "lwip/sockets.h"
@@ -5,7 +10,25 @@
 #include "lwip/inet.h"
 #include "../logging/logging.h"
 #include "new_http.h"
+
+#if PLATFORM_XR809
+
+#define kNoErr                      0       //! No error occurred.
+typedef void *beken_thread_arg_t;
+typedef int OSStatus;
+
+#define close lwip_close
+
+static OS_Thread_t g_http_thread;
+
+#else
 #include "str_pub.h"
+#endif
+
+
+#if PLATFORM_XR809
+#define DISABLE_SEPARATE_THREAD_FOR_EACH_TCP_CLIENT 1
+#endif
 
 static void tcp_server_thread( beken_thread_arg_t arg );
 static void tcp_client_thread( beken_thread_arg_t arg );
@@ -16,11 +39,20 @@ void start_tcp_http()
 {
     OSStatus err = kNoErr;
 
+#if PLATFORM_XR809
+	err = OS_ThreadCreate(&g_http_thread,
+		                "TCP_server",
+		                tcp_server_thread,
+		                NULL,
+		                OS_THREAD_PRIO_CONSOLE,
+		                0x800);
+#else
     err = rtos_create_thread( NULL, BEKEN_APPLICATION_PRIORITY, 
 									"TCP_server", 
 									(beken_thread_function_t)tcp_server_thread,
 									0x800,
 									(beken_thread_arg_t)0 );
+#endif
     if(err != kNoErr)
     {
        ADDLOG_ERROR(LOG_FEATURE_HTTP, "create \"TCP_server\" thread failed!\r\n");
@@ -57,7 +89,9 @@ static void tcp_client_thread( beken_thread_arg_t arg )
 
   request.fd = fd;
   request.received = buf;
-  request.receivedLen = recv( fd, request.received, 1024, 0 );
+  request.receivedLenmax = 1024;
+  request.responseCode = HTTP_RESPONSE_OK;
+  request.receivedLen = recv( fd, request.received, request.receivedLenmax, 0 );
   request.received[request.receivedLen] = 0;
 
   request.reply = reply;
@@ -91,8 +125,16 @@ exit:
   if ( reply != NULL ) 
     os_free( reply );
 
-  close( fd );
-  rtos_delete_thread( NULL );
+  close( fd );;
+#if DISABLE_SEPARATE_THREAD_FOR_EACH_TCP_CLIENT
+
+#else
+#if PLATFORM_XR809
+	OS_ThreadDelete( NULL );
+#else
+	rtos_delete_thread( NULL );
+#endif
+#endif
 }
 
 /* TCP server listener thread */
@@ -127,18 +169,45 @@ static void tcp_server_thread( beken_thread_arg_t arg )
             client_fd = accept( tcp_listen_fd, (struct sockaddr *) &client_addr, &sockaddr_t_size );
             if ( client_fd >= 0 )
             {
+#if PLATFORM_XR809
+#if DISABLE_SEPARATE_THREAD_FOR_EACH_TCP_CLIENT
+
+#else
+				OS_Thread_t clientThreadUnused ;
+#endif
+#endif
                 os_strcpy( client_ip_str, inet_ntoa( client_addr.sin_addr ) );
                 ADDLOG_DEBUG(LOG_FEATURE_HTTP,  "TCP Client %s:%d connected, fd: %d", client_ip_str, client_addr.sin_port, client_fd );
-                if ( kNoErr
-                     != rtos_create_thread( NULL, BEKEN_APPLICATION_PRIORITY, 
+#if DISABLE_SEPARATE_THREAD_FOR_EACH_TCP_CLIENT
+				// Use main server thread (blocking all other clients)
+				// right now, I am getting OS_ThreadCreate everytime on XR809 platform
+				tcp_client_thread((beken_thread_arg_t)client_fd);
+#else
+				// Create separate thread for client
+                if ( kNoErr != 
+#if PLATFORM_XR809
+					OS_ThreadCreate(&clientThreadUnused,
+							                     "TCP Clients",
+		                tcp_client_thread,
+		                client_fd,
+		                OS_THREAD_PRIO_CONSOLE,
+		                0x400)
+
+#else
+                     rtos_create_thread( NULL, BEKEN_APPLICATION_PRIORITY, 
 							                     "TCP Clients",
                                                  (beken_thread_function_t)tcp_client_thread,
                                                  0x800, 
-                                                 (beken_thread_arg_t)client_fd ) ) 
+                                                 (beken_thread_arg_t)client_fd )
+	
+#endif
+												 ) 
                 {
+                  ADDLOG_DEBUG(LOG_FEATURE_HTTP,  "TCP Client %s:%d thread creation failed! fd: %d", client_ip_str, client_addr.sin_port, client_fd );
                   close( client_fd );
                   client_fd = -1;
                 }
+#endif
             }
         }
     }
@@ -147,5 +216,9 @@ static void tcp_server_thread( beken_thread_arg_t arg )
 		  ADDLOG_ERROR(LOG_FEATURE_HTTP,  "Server listerner thread exit with err: %d", err );
 	
     close( tcp_listen_fd );
+#if PLATFORM_XR809
+	OS_ThreadDelete( NULL );
+#else
     rtos_delete_thread( NULL );
+#endif
 }

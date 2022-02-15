@@ -2,19 +2,24 @@
 
 #include "../new_common.h"
 #include "ctype.h" 
-#ifndef WINDOWS
 #include "lwip/sockets.h"
-#include "str_pub.h"
-#else
+#if WINDOWS
 //#include <windows.h>
 #include <winsock2.h>
 //#include <ws2tcpip.h>
+#elif PLATFORM_XR809
+#include <stdarg.h>
+#include <image/flash.h>
+#else
+#include "str_pub.h"
 #endif
 #include "new_http.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
 #include "../ota/ota.h"
 #ifdef WINDOWS
+
+#elif PLATFORM_XR809
 
 #elif defined(PLATFORM_BK7231N)
 // tuya-iotos-embeded-sdk-wifi-ble-bk7231n/sdk/include/tuya_hal_storage.h
@@ -48,10 +53,11 @@ Connection: keep-alive
 
 #define DEFAULT_OTA_URL "http://raspberrypi:1880/firmware"
 
-const char httpHeader[] = "HTTP/1.1 200 OK\nContent-type: " ;  // HTTP header
+const char httpHeader[] = "HTTP/1.1 %d OK\nContent-type: %s" ;  // HTTP header
 const char httpMimeTypeHTML[] = "text/html" ;              // HTML MIME type
 const char httpMimeTypeText[] = "text/plain" ;           // TEXT MIME type
 const char httpMimeTypeJson[] = "application/json" ;           // TEXT MIME type
+const char httpMimeTypeBinary[] = "application/octet-stream" ;   // binary/file MIME type
 const char htmlHeader[] = "<!DOCTYPE html><html><body>" ;
 const char htmlEnd[] = "</body></html>" ;
 const char htmlReturnToMenu[] = "<a href=\"index\">Return to menu</a>";;
@@ -73,7 +79,8 @@ const char *methodNames[] = {
 #define os_malloc malloc
 #endif
 
-
+void misc_formatUpTimeString(int totalSeconds, char *o);
+int Time_getUpTimeSeconds();
 
 typedef struct http_callback_tag {
     char *url;
@@ -150,8 +157,7 @@ bool http_checkUrlBase(const char *base, const char *fileName) {
 }
 
 void http_setup(http_request_t *request, const char *type){
-	poststr(request,httpHeader);
-	poststr(request,type);
+	hprintf128(request, httpHeader, request->responseCode, type);
 	poststr(request,"\r\n"); // next header
 	poststr(request,httpCorsHeaders);
 	poststr(request,"\r\n"); // end headers with double CRLF
@@ -304,16 +310,29 @@ template_t g_templates [] = {
 
 int g_total_templates = sizeof(g_templates)/sizeof(g_templates[0]);
 
+#if PLATFORM_XR809
+const char *g_header = "<h1><a href=\"https://github.com/openshwprojects/OpenXR809/\">OpenXR809</a></h1><h3><a href=\"https://www.elektroda.com/rtvforum/viewtopic.php?p=19841301#19841301\">[Read more]</a><a href=\"https://paypal.me/openshwprojects\">[Support project]</a></h3>";
+
+#else
 const char *g_header = "<h1><a href=\"https://github.com/openshwprojects/OpenBK7231T/\">OpenBK7231</a></h1><h3><a href=\"https://www.elektroda.com/rtvforum/viewtopic.php?p=19841301#19841301\">[Read more]</a><a href=\"https://paypal.me/openshwprojects\">[Support project]</a></h3>";
+
+#endif
 
 
 void HTTP_AddBuildFooter(http_request_t *request) {
 	char upTimeStr[128];
+	unsigned char mac[32];
 	poststr(request,"<br>");
 	poststr(request,g_build_str);
 	poststr(request,"<br> Online for ");
 	misc_formatUpTimeString(Time_getUpTimeSeconds(), upTimeStr);
 	poststr(request,upTimeStr);
+
+	WiFI_GetMacAddress((char *)mac);
+
+	sprintf(upTimeStr,"<br> Device MAC: %02X%02X%02X%02X%02X%02X",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
+	poststr(request,upTimeStr);
+
 }
 
 
@@ -390,7 +409,7 @@ void misc_formatUpTimeString(int totalSeconds, char *o) {
 
 int hprintf128(http_request_t *request, const char *fmt, ...){
   va_list argList;
-  BaseType_t taken;
+  //BaseType_t taken;
 	char tmp[128];
 	va_start(argList, fmt);
 	vsprintf(tmp, fmt, argList);
@@ -398,6 +417,16 @@ int hprintf128(http_request_t *request, const char *fmt, ...){
 	return postany(request, tmp, strlen(tmp));
 }
 
+uint8_t hexdigit( char hex )
+{
+    return (hex <= '9') ? hex - '0' : 
+                          toupper(hex) - 'A' + 10 ;
+}
+
+uint8_t hexbyte( const char* hex )
+{
+    return (hexdigit(*hex) << 4) | hexdigit(*(hex+1)) ;
+}
 
 int HTTP_ProcessPacket(http_request_t *request) {
 	int i, j;
@@ -494,6 +523,7 @@ int HTTP_ProcessPacket(http_request_t *request) {
 	} while(1);
 
 	request->bodystart = p;
+	request->bodylen = request->receivedLen - (p - request->received); 
 
 	// we will make this more general
 	http_getArg(urlStr,"a",tmpA,sizeof(tmpA));
@@ -602,7 +632,38 @@ int HTTP_ProcessPacket(http_request_t *request) {
 		poststr(request,htmlReturnToCfg);
 		HTTP_AddBuildFooter(request);
 		poststr(request,htmlEnd);
+	} else if(http_checkUrlBase(urlStr,"cfg_webapp")) {
+		http_setup(request, httpMimeTypeHTML);
+		poststr(request,htmlHeader);
+		poststr(request,g_header);
+		poststr(request,"<h2> Use this to set the URL of the Webapp</h2>");
+		poststr(request,"<form action=\"/cfg_webapp_set\">\
+			  <label for=\"url\">Url:</label><br>\
+			  <input type=\"text\" id=\"url\" name=\"url\" value=\"");			  
+		poststr(request,CFG_GetWebappRoot());
+		poststr(request,"\"><br>\
+			  <input type=\"submit\" value=\"Submit\">\
+			</form> ");
+		poststr(request,htmlReturnToCfg);
+		HTTP_AddBuildFooter(request);
+		poststr(request,htmlEnd);
+	} else if(http_checkUrlBase(urlStr,"cfg_webapp_set")) {
+		http_setup(request, httpMimeTypeHTML);
+		poststr(request,htmlHeader);
+		poststr(request,g_header);
+	
+		if(http_getArg(urlStr,"url",tmpA,sizeof(tmpA))) {
+			CFG_SetWebappRoot(tmpA);
+		}
+		poststr(request,"Webapp url set!");
+		
+		poststr(request,"<br>");
+		poststr(request,htmlReturnToCfg);
+		HTTP_AddBuildFooter(request);
+		poststr(request,htmlEnd);
 	} else if(http_checkUrlBase(urlStr,"cfg_wifi_set")) {
+		printf("HTTP_ProcessPacket: generating cfg_wifi_set \r\n");
+
 		http_setup(request, httpMimeTypeHTML);
 		poststr(request,htmlHeader);
 		poststr(request,g_header);
@@ -619,7 +680,9 @@ int HTTP_ProcessPacket(http_request_t *request) {
 			}
 			poststr(request,"WiFi mode set: connect to WLAN.");
 		}
+		printf("HTTP_ProcessPacket: calling CFG_SaveWiFi \r\n");
 		CFG_SaveWiFi();
+		printf("HTTP_ProcessPacket: done CFG_SaveWiFi \r\n");
 
 		poststr(request,"Please wait for module to reset...");
 		
@@ -656,6 +719,9 @@ int HTTP_ProcessPacket(http_request_t *request) {
 #ifdef WINDOWS
 
 			poststr(request,"Not available on Windows<br>");
+#elif PLATFORM_XR809
+			poststr(request,"TODO XR809<br>");
+
 #else
 			AP_IF_S *ar;
 			uint32_t num;
@@ -698,6 +764,39 @@ int HTTP_ProcessPacket(http_request_t *request) {
 		poststr(request,htmlReturnToCfg);
 		HTTP_AddBuildFooter(request);
 		poststr(request,htmlEnd);
+	} else if(http_checkUrlBase(urlStr,"cfg_mac")) {
+		// must be unsigned, else print below prints negatives as e.g. FFFFFFFe
+		unsigned char mac[6];
+
+		http_setup(request, httpMimeTypeHTML);
+		poststr(request,htmlHeader);
+		poststr(request,g_header);
+
+		if(http_getArg(recvbuf,"mac",tmpA,sizeof(tmpA))) {
+			for( i = 0; i < 6; i++ )
+			{
+				mac[i] = hexbyte( &tmpA[i * 2] ) ;
+			}
+			WiFI_SetMacAddress((char*)mac);
+			//sscanf(tmpA,"%02X%02X%02X%02X%02X%02X",&mac[0],&mac[1],&mac[2],&mac[3],&mac[4],&mac[5]);
+			poststr(request,"<h4> New MAC set!</h4>");
+		}
+
+		WiFI_GetMacAddress((char *)mac);
+
+		sprintf(tmpA,"%02X%02X%02X%02X%02X%02X",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
+
+		poststr(request,"<h2> Here you can change MAC address.</h2>");
+		poststr(request,"<form action=\"/cfg_mac\">\
+			  <label for=\"mac\">MAC:</label><br>\
+			  <input type=\"text\" id=\"mac\" name=\"mac\" value=\"");
+		poststr(request,tmpA);
+		poststr(request,"\"><br><br>\
+			  <input type=\"submit\" value=\"Submit\" onclick=\"return confirm('Are you sure? Please check MAC hex string twice?')\">\
+			</form> ");
+		poststr(request,htmlReturnToCfg);
+		HTTP_AddBuildFooter(request);
+		poststr(request,htmlEnd);
 	} else if(http_checkUrlBase(urlStr,"flash_read_tool")) {
 		int len = 16;
 		int ofs = 1970176;
@@ -732,7 +831,13 @@ int HTTP_ProcessPacket(http_request_t *request) {
 				} else {
 					now = rem;
 				}
+#if PLATFORM_XR809
+				//uint32_t flash_read(uint32_t flash, uint32_t addr,void *buf, uint32_t size)
+				#define FLASH_INDEX_XR809 0
+				res = flash_read(FLASH_INDEX_XR809, nowOfs, buffer, now);
+#else
 				res = tuya_hal_flash_read (nowOfs, buffer,now);
+#endif
 				for(i = 0; i < now; i++) {
 					sprintf(tmpA,"%02X ",buffer[i]);
 					poststr(request,tmpA);
@@ -805,6 +910,8 @@ int HTTP_ProcessPacket(http_request_t *request) {
 		poststr(request,g_header);
 		poststr(request,"<h4>Home Assistant Cfg</h4>");
 		poststr(request,"<h4>Paste this to configuration yaml</h4>");
+		poststr(request,"<h5>Make sure that you have \"switch:\" keyword only once! Home Assistant doesn't like dup keywords.</h5>");
+		poststr(request,"<h5>You can also use \"switch MyDeviceName:\" to avoid keyword duplication!</h5>");
 		
 		poststr(request,"<textarea rows=\"40\" cols=\"50\">");
 
@@ -881,6 +988,8 @@ int HTTP_ProcessPacket(http_request_t *request) {
 		poststr(request,"<form action=\"cfg_quick\"><input type=\"submit\" value=\"Quick Config\"/></form>");
 		poststr(request,"<form action=\"cfg_wifi\"><input type=\"submit\" value=\"Configure WiFi\"/></form>");
 		poststr(request,"<form action=\"cfg_mqtt\"><input type=\"submit\" value=\"Configure MQTT\"/></form>");
+		poststr(request,"<form action=\"cfg_mac\"><input type=\"submit\" value=\"Change MAC\"/></form>");
+		poststr(request,"<form action=\"cfg_webapp\"><input type=\"submit\" value=\"Configure Webapp\"/></form>");
 		poststr(request,"<form action=\"cfg_ha\"><input type=\"submit\" value=\"Generate Home Assistant cfg\"/></form>");
 		poststr(request,"<form action=\"ota\"><input type=\"submit\" value=\"OTA (update software by WiFi)\"/></form>");
 		poststr(request,"<form action=\"cmd_single\"><input type=\"submit\" value=\"Execute custom command\"/></form>");
@@ -962,10 +1071,17 @@ int HTTP_ProcessPacket(http_request_t *request) {
 		poststr(request,"<form action=\"cfg_pins\">");
 		for( i = 0; i < GPIO_MAX; i++) {
 			int si, ch;
+
 			si = PIN_GetPinRoleForPinIndex(i);
 			ch = PIN_GetPinChannelForPinIndex(i);
+
+#if PLATFORM_XR809
+			poststr(request,PIN_GetPinNameAlias(i));
+			poststr(request," ");
+#else
 			sprintf(tmpA, "P%i ",i);
 			poststr(request,tmpA);
+#endif
 			sprintf(tmpA, "<select name=\"%i\">",i);
 			poststr(request,tmpA);
 			for(j = 0; j < IOR_Total_Options; j++) {
@@ -1092,6 +1208,8 @@ int HTTP_ProcessPacket(http_request_t *request) {
 			sprintf(tmpB,"<h3>OTA requested for %s!</h3>",tmpA);
 			poststr(request,tmpB);
 #if WINDOWS
+
+#elif PLATFORM_XR809
 
 #else
         otarequest(tmpA);

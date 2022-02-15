@@ -17,6 +17,35 @@ typedef unsigned char u8;
 typedef unsigned char uint8_t;
 typedef unsigned int uint32_t;
 
+#elif PLATFORM_XR809
+
+typedef int bool;
+#define true 1
+#define false 0
+
+#define PR_NOTICE printf
+typedef unsigned char u8;
+typedef unsigned char uint8_t;
+typedef unsigned int uint32_t;
+typedef unsigned int UINT32;
+
+#define ASSERT
+#define os_strcpy strcpy
+#define os_malloc malloc
+#define os_free free
+#define os_memset memset
+
+#define rtos_delay_milliseconds OS_ThreadSleep
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <time.h>
+
+#include "common/framework/platform_init.h"
+
+#include "kernel/os/os.h"
+
 #else
 #define _TUYA_DEVICE_GLOBAL
 
@@ -50,4 +79,6 @@ typedef unsigned char byte;
 int strcat_safe(char *tg, const char *src, int tgMaxLen);
 int strcpy_safe(char *tg, const char *src, int tgMaxLen);
 void urldecode2_safe(char *dst, const char *srcin, int maxDstLen);
+int Time_getUpTimeSeconds();
+char Tiny_CRC8(const char *data,int length);
 
