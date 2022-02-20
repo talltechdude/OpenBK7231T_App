@@ -168,3 +168,124 @@ void Setup_Device_ArlecCCTDownlight() {
 
 	PIN_SaveToFlash();
 }
+
+// https://www.elektroda.pl/rtvforum/topic3804553.html
+// SmartSwitch Nedis WIFIPO120FWT
+void Setup_Device_NedisWIFIPO120FWT_16A() {
+
+	// WB2S
+	// Pins are:
+	// Led - PWM0 - P6
+	// BL0937-CF - PWM1 - P7
+	// BL0937-CF1- PWM2 - P8
+	// Button - RX1  - P10
+	// BL0937-SEL - PWM4 - P24
+	// Relay - PWM5 - P26
+	
+
+	PIN_ClearPins();
+	// LEd
+	PIN_SetPinRoleForPinIndex(6, IOR_LED);
+	PIN_SetPinChannelForPinIndex(6, 1);
+	// Button
+	PIN_SetPinRoleForPinIndex(10, IOR_Button);
+	PIN_SetPinChannelForPinIndex(10, 1);
+	// Relay
+	PIN_SetPinRoleForPinIndex(26, IOR_Relay_n);
+	PIN_SetPinChannelForPinIndex(26, 1);
+
+	PIN_SaveToFlash();
+}
+
+// https://www.elektroda.pl/rtvforum/topic3804553.html
+// SmartSwitch Nedis WIFIP130FWT
+void Setup_Device_NedisWIFIP130FWT_10A() {
+
+	// WB2S
+	// Pins are:
+	// Led - PWM0 - P6 
+	// Button - RX1  - P10
+	// Relay - PWM5 - P26
+	
+
+	PIN_ClearPins();
+	// Led
+	PIN_SetPinRoleForPinIndex(6, IOR_LED);
+	PIN_SetPinChannelForPinIndex(6, 1);
+	// Button
+	PIN_SetPinRoleForPinIndex(10, IOR_Button);
+	PIN_SetPinChannelForPinIndex(10, 1);
+	// Relay
+	PIN_SetPinRoleForPinIndex(26, IOR_Relay);
+	PIN_SetPinChannelForPinIndex(26, 1);
+
+	PIN_SaveToFlash();
+}
+
+// https://www.elektroda.pl/rtvforum/topic3804553.html
+// SmartSwitch Emax Home EDU8774 16A 
+void Setup_Device_EmaxHome_EDU8774() {
+
+	// WB2S
+	// Pins are:
+	// BL0937-CF - PWM0 - P6 
+	// BL0937-CF1 - PWM1 - P7
+	// BL0937-SEL - PWM2 - P8
+	// Button - RX1 - P10
+	// Relay - PWM4 - P24
+	// Led - PWM5 - P26
+	
+
+	PIN_ClearPins();
+	// Button
+	PIN_SetPinRoleForPinIndex(10, IOR_Button);
+	PIN_SetPinChannelForPinIndex(10, 1);
+	// Relay
+	PIN_SetPinRoleForPinIndex(24, IOR_Relay);
+	PIN_SetPinChannelForPinIndex(24, 1);
+	// Led
+	PIN_SetPinRoleForPinIndex(26, IOR_LED);
+	PIN_SetPinChannelForPinIndex(26, 1);
+
+	PIN_SaveToFlash();
+}
+
+// TODO - ELEKTRODA LINK
+// QiachipSmartSwitch
+void Setup_Device_BK7231N_CB2S_QiachipSmartSwitch() {
+
+
+
+	PIN_ClearPins();
+	// Button
+	PIN_SetPinRoleForPinIndex(7, IOR_Button);
+	PIN_SetPinChannelForPinIndex(7, 1);
+	// Relay
+	PIN_SetPinRoleForPinIndex(8, IOR_Relay);
+	PIN_SetPinChannelForPinIndex(8, 1);
+	// Led
+
+	PIN_SaveToFlash();
+}
+
+
+// https://www.tokmanni.fi/alypistorasia-home-connect-ip20-6419860720456
+// Marked as Smart-PFW02-G
+// Relay (with npn-transistor) at PWM4 P24
+// Button PWM5 P26
+// LED PWM1 P7
+void Setup_Device_TuyaSmartPFW02G() {
+	PIN_ClearPins();
+
+	PIN_SetPinRoleForPinIndex(24, IOR_Relay_n);
+	PIN_SetPinChannelForPinIndex(24, 1);
+
+	PIN_SetPinRoleForPinIndex(26, IOR_Button);
+	PIN_SetPinChannelForPinIndex(26, 1);
+
+	PIN_SetPinRoleForPinIndex(7, IOR_LED);
+	PIN_SetPinChannelForPinIndex(7, 1);
+
+
+	PIN_SaveToFlash();
+}

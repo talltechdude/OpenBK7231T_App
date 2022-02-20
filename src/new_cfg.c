@@ -28,7 +28,7 @@ static char g_mqtt_pass[128] = "qqqqqqqqqq";
 static char g_wifi_ssid[64] = { 0 };
 static char g_wifi_pass[64] = { 0 };
 
-#if PLATFORM_XR809
+#if PLATFORM_XR809 || WINDOWS
 #define CONFIG_URL_SIZE_MAX 64
 #endif
 
@@ -59,20 +59,26 @@ const char *CFG_GetWebappRoot(){
 	return g_webappRoot;
 }
 
-void CFG_SetWebappRoot(const char *s) {
+int CFG_SetWebappRoot(const char *s) {
 #if WINDOWS
 	strcpy_safe(g_webappRoot, s,sizeof(g_webappRoot));
-
+	return 1; // ok
 #elif PLATFORM_XR809
 	strcpy_safe(g_webappRoot, s,sizeof(g_webappRoot));
+	return 1; // ok
 
 #else
 	ITEM_URL_CONFIG item;
 	int res;
 	CONFIG_INIT_ITEM(CONFIG_TYPE_WEBAPP_ROOT, &item);
 	res = config_get_item(&item);
-	if (res) 
-		strcpy_safe(g_webappRoot, item.url,sizeof(g_webappRoot));
+	strcpy_safe(item.url, s,sizeof(item.url));
+	strcpy_safe(g_webappRoot, item.url,sizeof(g_webappRoot));
+	
+	if(config_save_item(&item)) {
+		return 1;
+	}
+	return 0;
 #endif
 }
 
@@ -89,9 +95,15 @@ const char *CFG_GetShortDeviceName(){
 #elif PLATFORM_XR809
 #define DEVICENAME_PREFIX_FULL "OpenXR809"
 #define DEVICENAME_PREFIX_SHORT "oxr"
-#else
+#elif PLATFORM_BK7231N
+#define DEVICENAME_PREFIX_FULL "OpenBK7231N"
+#define DEVICENAME_PREFIX_SHORT "obk"
+#elif PLATFORM_BK7231T
 #define DEVICENAME_PREFIX_FULL "OpenBK7231T"
 #define DEVICENAME_PREFIX_SHORT "obk"
+#else
+#error "You must define a platform.."
+This platform is not supported, error!
 #endif
 
 void WiFI_GetMacAddress(char *mac) {
@@ -110,24 +122,28 @@ void WiFI_GetMacAddress(char *mac) {
     wifi_get_mac_address((char *)mac, CONFIG_ROLE_STA);
 #endif
 }
-void WiFI_SetMacAddress(char *mac) {
+int WiFI_SetMacAddress(char *mac) {
 #if WINDOWS
-
+	return 0;
 #elif PLATFORM_XR809
 	sysinfo_t *inf;
 	int res;
 	inf = sysinfo_get();
 	if(inf == 0) {
 		printf("WiFI_SetMacAddress: sysinfo_get returned 0!\n\r");
-		return;
+		return 0; // error
 	}
 	memcpy(inf->mac_addr,mac,6);
 	res = sysinfo_save_wrapper();
 	if(res != 0) {
 		printf("WiFI_SetMacAddress: sysinfo_save error - %i!\n\r",res);
+		return 0; // error
 	}
+	return 1;
 #else
-    wifi_set_mac_address((char *)mac);
+   if(wifi_set_mac_address((char *)mac))
+	   return 1;
+   return 0; // error
 #endif
 }
 void CFG_CreateDeviceNameUnique()
@@ -234,17 +250,17 @@ void CFG_LoadWiFi() {
 		// try to read 'old' structure with extra 8 bytes
 		// if we find it, delete and re-save with new structure
 		ITEM_NEW_WIFI_CONFIG2 container;
-		CONFIG_INIT_ITEM(NEW_WIFI_CONFIG, &container);
+		CONFIG_INIT_ITEM(OLD_WIFI_CONFIG, &container);
 		if (config_get_item(&container) != 0){
 			strcpy_safe(g_wifi_ssid,container.ssid,sizeof(g_wifi_ssid));
 			strcpy_safe(g_wifi_pass,container.pass,sizeof(g_wifi_pass));
 			// delete and re-save
-			config_delete_item(NEW_WIFI_CONFIG);
+			config_delete_item(OLD_WIFI_CONFIG);
 			CFG_SaveWiFi();
 		} 
 	}
 	{
-		ITEM_NEW_WIFI_CONFIG container;
+		ITEM_NEW_NEW_WIFI_CONFIG container;
 		CONFIG_INIT_ITEM(CONFIG_TYPE_WIFI, &container);
 		if (config_get_item(&container) != 0){
 			strcpy_safe(g_wifi_ssid,container.ssid,sizeof(g_wifi_ssid));
@@ -286,16 +302,16 @@ int sysinfo_save_wrapper() {
 	return 0;
 }
 #endif
-void CFG_SaveMQTT() {
+int CFG_SaveMQTT() {
 #if WINDOWS
-
+	return 0;
 #elif PLATFORM_XR809
 	sysinfo_t *inf;
 	int res;
 	inf = sysinfo_get();
 	if(inf == 0) {
 		printf("CFG_SaveMQTT: sysinfo_get returned 0!\n\r");
-		return;
+		return 0;
 	}
 	strcpy_safe(inf->mqtt_param.userName, g_mqtt_userName, sizeof(inf->mqtt_param.userName));
 	strcpy_safe(inf->mqtt_param.pass, g_mqtt_pass, sizeof(inf->mqtt_param.pass));
@@ -308,6 +324,7 @@ void CFG_SaveMQTT() {
 	res = sysinfo_save_wrapper();
 	if(res != 0) {
 		printf("CFG_SaveMQTT: sysinfo_save error - %i!\n\r",res);
+		return 0;
 	}
 #else
 	ITEM_NEW_MQTT_CONFIG container;
@@ -318,7 +335,9 @@ void CFG_SaveMQTT() {
 	strcpy_safe(container.hostName, g_mqtt_host, sizeof(container.hostName));
 	strcpy_safe(container.brokerName, g_mqtt_brokerName, sizeof(container.brokerName));
 	container.port = g_mqtt_port;
-	config_save_item(&container);
+	if(config_save_item(&container))
+		return 1;
+	return 0;
 	
 #endif
 }
@@ -355,12 +374,12 @@ void CFG_LoadMQTT() {
 			g_mqtt_port = container.port;
 
 			// delete and re-save
-			config_delete_item(NEW_MQTT_CONFIG);
+			config_delete_item(OLD_MQTT_CONFIG);
 			CFG_SaveMQTT();
 		}
 	}
 	{
-		ITEM_NEW_MQTT_CONFIG container;
+		ITEM_NEW_NEW_MQTT_CONFIG container;
 		CONFIG_INIT_ITEM(CONFIG_TYPE_MQTT, &container);
 		if (config_get_item(&container) != 0){
 			strcpy_safe(g_mqtt_userName,container.userName,sizeof(g_mqtt_userName));

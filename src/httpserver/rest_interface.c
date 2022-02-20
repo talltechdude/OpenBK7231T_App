@@ -15,11 +15,9 @@
 #include "../flash_config/flash_config.h"
 #include "../new_cfg.h"
 
-
-extern int g_reset;
-
 extern UINT32 flash_read(char *user_buf, UINT32 count, UINT32 address);
 
+static int http_rest_error(http_request_t *request, int code, char *msg);
 
 static int http_rest_get(http_request_t *request);
 static int http_rest_post(http_request_t *request);
@@ -42,11 +40,16 @@ static int http_favicon(http_request_t *request);
 static int http_rest_post_reboot(http_request_t *request);
 static int http_rest_post_flash(http_request_t *request, int startaddr);
 static int http_rest_get_flash(http_request_t *request, int startaddr, int len);
+static int http_rest_get_flash_advanced(http_request_t *request);
+static int http_rest_post_flash_advanced(http_request_t *request);
 
 static int http_rest_get_info(http_request_t *request);
 
 static int http_rest_get_dumpconfig(http_request_t *request);
 static int http_rest_get_testconfig(http_request_t *request);
+
+static int http_rest_post_channels(http_request_t *request);
+static int http_rest_get_channels(http_request_t *request);
 
 void init_rest(){
     HTTP_RegisterCallback( "/api/", HTTP_GET, http_rest_get);
@@ -61,8 +64,23 @@ const char *apppage1 =
 "    <head>"
 "        <script>"
 "            var root = '";
+#if WINDOWS
+const char *obktype = "windows";
 const char * apppage2 = "';"
+"            var obktype = 'windows';"
 "            var device = 'http://";
+#elif PLATFORM_XR809
+const char *obktype = "XR809";
+const char * apppage2 = "';"
+"            var obktype = 'XR809';"
+"            var device = 'http://";
+#else
+const char *obktype = "beken";
+const char * apppage2 = "';"
+"            var obktype = 'beken';"
+"            var device = 'http://";
+#endif
+
 const char * apppage3 = "';"
 "        </script>"
 "        <script src=\"";
@@ -71,6 +89,119 @@ const char * apppage4 = "startup.js\"></script>"
 "<body>"
 "</body>"
 "</html>";
+
+
+static int http_rest_get(http_request_t *request){
+    ADDLOG_DEBUG(LOG_FEATURE_API, "GET of %s", request->url);
+    
+    if (!strcmp(request->url, "api/channels")){
+        return http_rest_get_channels(request);
+    }
+
+    if (!strcmp(request->url, "api/pins")){
+        return http_rest_get_pins(request);
+    }
+    if (!strcmp(request->url, "api/logconfig")){
+        return http_rest_get_logconfig(request);
+    }
+
+    if (!strncmp(request->url, "api/seriallog", 13)){
+        return http_rest_get_seriallog(request);
+    }
+
+#ifdef BK_LITTLEFS
+    if (!strcmp(request->url, "api/fsblock")){
+        return http_rest_get_flash(request, LFS_BLOCKS_START, LFS_BLOCKS_LEN);
+    }
+#endif
+
+#ifdef BK_LITTLEFS
+    if (!strncmp(request->url, "api/lfs/", 8)){
+        return http_rest_get_lfs_file(request);
+    }
+#endif
+
+    if (!strcmp(request->url, "api/info")){
+        return http_rest_get_info(request);
+    }
+
+    if (!strncmp(request->url, "api/flash/", 10)){
+        return http_rest_get_flash_advanced(request);
+    }
+
+
+    if (!strcmp(request->url, "api/dumpconfig")){
+        return http_rest_get_dumpconfig(request);
+    }
+
+    if (!strcmp(request->url, "api/testconfig")){
+        return http_rest_get_testconfig(request);
+    }
+    
+    
+
+    http_setup(request, httpMimeTypeHTML);
+    poststr(request, "GET of ");
+    poststr(request, request->url);
+    poststr(request, htmlEnd);
+    poststr(request,NULL);
+    return 0;
+}
+
+static int http_rest_post(http_request_t *request){
+    char tmp[20];
+    ADDLOG_DEBUG(LOG_FEATURE_API, "POST to %s", request->url);
+
+    if (!strcmp(request->url, "api/channels")){
+        return http_rest_post_channels(request);
+    }
+
+    if (!strcmp(request->url, "api/pins")){
+        return http_rest_post_pins(request);
+    }
+    if (!strcmp(request->url, "api/logconfig")){
+        return http_rest_post_logconfig(request);
+    }
+
+    if (!strcmp(request->url, "api/reboot")){
+        return http_rest_post_reboot(request);
+    }
+    if (!strcmp(request->url, "api/ota")){
+        return http_rest_post_flash(request, 0x132000);
+    }
+    if (!strncmp(request->url, "api/flash/", 10)){
+        return http_rest_post_flash_advanced(request);
+    }
+
+#ifdef BK_LITTLEFS
+    if (!strcmp(request->url, "api/fsblock")){
+        return http_rest_post_flash(request, LFS_BLOCKS_START);
+    }
+#endif
+    
+#ifdef BK_LITTLEFS
+    if (!strncmp(request->url, "api/lfs/", 8)){
+        return http_rest_post_lfs_file(request);
+    }
+#endif
+
+    http_setup(request, httpMimeTypeHTML);
+    poststr(request, "POST to ");
+    poststr(request, request->url);
+    poststr(request, "<br/>Content Length:");
+    sprintf(tmp, "%d", request->contentLength);
+    poststr(request, tmp);
+    poststr(request, "<br/>Content:[");
+    poststr(request, request->bodystart);
+    poststr(request, "]<br/>");
+    poststr(request, htmlEnd);
+    poststr(request,NULL);
+    return 0;
+}
+
+
+
+
 
 
 static int http_rest_app(http_request_t *request){
@@ -278,52 +409,6 @@ static int http_favicon(http_request_t *request){
 #endif
 
 
-static int http_rest_get(http_request_t *request){
-    ADDLOG_DEBUG(LOG_FEATURE_API, "GET of %s", request->url);
-    if (!strcmp(request->url, "api/pins")){
-        return http_rest_get_pins(request);
-    }
-    if (!strcmp(request->url, "api/logconfig")){
-        return http_rest_get_logconfig(request);
-    }
-
-    if (!strncmp(request->url, "api/seriallog", 13)){
-        return http_rest_get_seriallog(request);
-    }
-
-#ifdef BK_LITTLEFS
-    if (!strcmp(request->url, "api/fsblock")){
-        return http_rest_get_flash(request, LFS_BLOCKS_START, LFS_BLOCKS_LEN);
-    }
-#endif
-
-#ifdef BK_LITTLEFS
-    if (!strncmp(request->url, "api/lfs/", 8)){
-        return http_rest_get_lfs_file(request);
-    }
-#endif
-
-    if (!strcmp(request->url, "api/info")){
-        return http_rest_get_info(request);
-    }
-
-    if (!strcmp(request->url, "api/dumpconfig")){
-        return http_rest_get_dumpconfig(request);
-    }
-
-    if (!strcmp(request->url, "api/testconfig")){
-        return http_rest_get_testconfig(request);
-    }
-    
-    
-
-    http_setup(request, httpMimeTypeHTML);
-    poststr(request, "GET of ");
-    poststr(request, request->url);
-    poststr(request, htmlEnd);
-    poststr(request,NULL);
-    return 0;
-}
 
 static int http_rest_get_seriallog(http_request_t *request){
     if (request->url[strlen(request->url)-1] == '1'){
@@ -483,57 +568,22 @@ static int http_rest_post_logconfig(http_request_t *request){
 
 
 static int http_rest_get_info(http_request_t *request){
+    char macstr[3*6+1];
     http_setup(request, httpMimeTypeJson);
-    hprintf128(request, "{\"uptimes\":%d,", Time_getUpTimeSeconds());
-    hprintf128(request, "\"build\":\"%s\"}", g_build_str);
+    hprintf128(request, "{\"uptime_s\":%d,", Time_getUpTimeSeconds());
+    hprintf128(request, "\"build\":\"%s\",", g_build_str);
+    hprintf128(request, "\"sys\":\"%s\",", obktype);
+    hprintf128(request, "\"ip\":\"%s\",", getMyIp());
+    hprintf128(request, "\"mac\":\"%s\",", getMACStr(macstr));
+    hprintf128(request, "\"mqtthost\":\"%s:%d\",", CFG_GetMQTTHost(), CFG_GetMQTTPort());
+    hprintf128(request, "\"mqtttopic\":\"%s\",", CFG_GetShortDeviceName());
+    hprintf128(request, "\"webapp\":\"%s\"}", CFG_GetWebappRoot());
+
     poststr(request, NULL);
     return 0;
 }
 
 
-static int http_rest_post(http_request_t *request){
-    char tmp[20];
-    ADDLOG_DEBUG(LOG_FEATURE_API, "POST to %s", request->url);
-    if (!strcmp(request->url, "api/pins")){
-        return http_rest_post_pins(request);
-    }
-    if (!strcmp(request->url, "api/logconfig")){
-        return http_rest_post_logconfig(request);
-    }
-
-    if (!strcmp(request->url, "api/reboot")){
-        return http_rest_post_reboot(request);
-    }
-    if (!strcmp(request->url, "api/ota")){
-        return http_rest_post_flash(request, 0x132000);
-    }
-#ifdef BK_LITTLEFS
-    if (!strcmp(request->url, "api/fsblock")){
-        return http_rest_post_flash(request, LFS_BLOCKS_START);
-    }
-#endif
-    
-#ifdef BK_LITTLEFS
-    if (!strncmp(request->url, "api/lfs/", 8)){
-        return http_rest_post_lfs_file(request);
-    }
-#endif
-
-    http_setup(request, httpMimeTypeHTML);
-    poststr(request, "POST to ");
-    poststr(request, request->url);
-    poststr(request, "<br/>Content Length:");
-    sprintf(tmp, "%d", request->contentLength);
-    poststr(request, tmp);
-    poststr(request, "<br/>Content:[");
-    poststr(request, request->bodystart);
-    poststr(request, "]<br/>");
-    poststr(request, htmlEnd);
-    poststr(request,NULL);
-    return 0;
-}
-
-// currently crashes the MCU - maybe stack overflow?
 static int http_rest_post_pins(http_request_t *request){
     int i;
     int r;
@@ -549,7 +599,6 @@ static int http_rest_post_pins(http_request_t *request){
     char *json_str = request->bodystart;
     int json_len = strlen(json_str);
 
-	http_setup(request, httpMimeTypeText);
 	memset(p, 0, sizeof(jsmn_parser));
 	memset(t, 0, sizeof(jsmntok_t)*128);
 
@@ -558,22 +607,18 @@ static int http_rest_post_pins(http_request_t *request){
     if (r < 0) {
         ADDLOG_ERROR(LOG_FEATURE_API, "Failed to parse JSON: %d", r);
         sprintf(tmp,"Failed to parse JSON: %d\n", r);
-        poststr(request, tmp);
-        poststr(request, NULL);
         os_free(p);
         os_free(t);
-        return 0;
+        return http_rest_error(request, 400, tmp);
     }
 
     /* Assume the top-level element is an object */
     if (r < 1 || t[0].type != JSMN_OBJECT) {
         ADDLOG_ERROR(LOG_FEATURE_API, "Object expected", r);
         sprintf(tmp,"Object expected\n");
-        poststr(request, tmp);
-        poststr(request, NULL);
         os_free(p);
         os_free(t);
-        return 0;
+        return http_rest_error(request, 400, tmp);
     }
 
     /* Loop over all keys of the root object */
@@ -587,9 +632,9 @@ static int http_rest_post_pins(http_request_t *request){
                 int roleval, pr;
                 jsmntok_t *g = &t[i + j + 2];
                 roleval = atoi(json_str + g->start);
-				pr = PIN_GetPinRoleForPinIndex(i);
+				pr = PIN_GetPinRoleForPinIndex(j);
 				if(pr != roleval) {
-					PIN_SetPinRoleForPinIndex(i,roleval);
+					PIN_SetPinRoleForPinIndex(j,roleval);
 					iChanged++;
 				}
             }
@@ -617,11 +662,24 @@ static int http_rest_post_pins(http_request_t *request){
     }
     if (iChanged){
 	    PIN_SaveToFlash();
+        ADDLOG_DEBUG(LOG_FEATURE_API, "Changed %d - saved to flash", iChanged);
     }
 
-    poststr(request, NULL);
     os_free(p);
     os_free(t);
+    return http_rest_error(request, 200, "OK");
+    return 0;
+}
+
+static int http_rest_error(http_request_t *request, int code, char *msg){
+    request->responseCode = HTTP_RESPONSE_SERVER_ERROR;
+    http_setup(request, httpMimeTypeJson);
+    if (code != 200){
+        hprintf128(request, "{\"error\":%d, \"msg\":\"%s\"}", code, msg);
+    } else {
+        hprintf128(request, "{\"success\":%d, \"msg\":\"%s\"}", code, msg);
+    }
+    poststr(request,NULL);
     return 0;
 }
 
@@ -643,12 +701,9 @@ static int http_rest_post_flash(http_request_t *request, int startaddr){
         towrite = request->contentLength;
     }
         
-    if (writelen < 0){
+    if (writelen < 0 || (startaddr + writelen > 0x200000)){
         ADDLOG_DEBUG(LOG_FEATURE_API, "ABORTED: %d bytes to write", writelen);
-        request->responseCode = HTTP_RESPONSE_SERVER_ERROR;
-        http_setup(request, httpMimeTypeJson);
-        hprintf128(request, "{\"error\":%d}", -20);
-        goto exit;
+        return http_rest_error(request, -20, "writelen < 0 or end > 0x200000");
     }
 
     do {
@@ -669,7 +724,6 @@ static int http_rest_post_flash(http_request_t *request, int startaddr){
     hprintf128(request, "{\"size\":%d}", total);
     close_ota();
 
-exit:
     poststr(request,NULL);
     return 0;
 }
@@ -678,15 +732,41 @@ static int http_rest_post_reboot(http_request_t *request){
     http_setup(request, httpMimeTypeJson);
     hprintf128(request, "{\"reboot\":%d}", 3);
     ADDLOG_DEBUG(LOG_FEATURE_API, "Rebooting in 3 seconds...");
-    g_reset = 3;
+	RESET_ScheduleModuleReset(3);
     poststr(request,NULL);
     return 0;
 }
 
+static int http_rest_get_flash_advanced(http_request_t *request){
+    char *params = request->url + 10;
+    int startaddr = 0; 
+    int len = 0;
+    int sres;
+    sres = sscanf(params, "%x-%x", &startaddr, &len);
+    if (sres == 2) {
+        return http_rest_get_flash(request, startaddr, len);
+    }
+    return http_rest_error(request, -1, "invalid url");
+}
+
+static int http_rest_post_flash_advanced(http_request_t *request){
+    char *params = request->url + 10;
+    int startaddr = 0; 
+    int sres;
+    sres = sscanf(params, "%x", &startaddr);
+    if (sres == 1 && startaddr >= START_ADR_OF_BK_PARTITION_OTA){
+        return http_rest_post_flash(request, startaddr);
+    }
+    return http_rest_error(request, -1, "invalid url");
+}
 
 static int http_rest_get_flash(http_request_t *request, int startaddr, int len){
     char *buffer;
     int res;
+
+    if (startaddr < 0 || (startaddr + len > 0x200000)){
+        return http_rest_error(request, -1, "requested flash read out of range");
+    }
 
     buffer = os_malloc(1024);
 
@@ -727,7 +807,7 @@ typedef struct item_new_test_config
 ITEM_NEW_TEST_CONFIG testconfig;
 
 static int http_rest_get_testconfig(http_request_t *request){
-
+#ifdef TESTCONFIG_ENABLE    
     INFO_ITEM_ST *ret;
     int intres;
 
@@ -788,5 +868,105 @@ static int http_rest_get_testconfig(http_request_t *request){
 
     http_setup(request, httpMimeTypeText);
     poststr(request, NULL);
+#else
+    return http_rest_error(request, 400, "unsupported");
+#endif    
+    return 0;
+}
+
+
+
+static int http_rest_get_channels(http_request_t *request){
+    int i;
+    /*typedef struct pinsState_s {
+    	byte roles[32];
+	    byte channels[32];
+    } pinsState_t;
+
+    extern pinsState_t g_pins;
+    */
+    http_setup(request, httpMimeTypeJson);
+    poststr(request, "{\"values\":{");
+    for (i = 0; i < 32; i++){
+        if (PIN_GetPinRoleForPinIndex(i)){
+            hprintf128(request, "\"%d\":", i, CHANNEL_Get(i));
+        }
+    }
+    poststr(request, "}}");
+    poststr(request, NULL);
+    return 0;
+}
+
+// currently crashes the MCU - maybe stack overflow?
+static int http_rest_post_channels(http_request_t *request){
+    int i;
+    int r;
+    char tmp[64];
+
+    //https://github.com/zserge/jsmn/blob/master/example/simple.c
+    //jsmn_parser p;
+    jsmn_parser *p = os_malloc(sizeof(jsmn_parser));
+    //jsmntok_t t[128]; /* We expect no more than 128 tokens */
+#define TOKEN_COUNT 128
+    jsmntok_t *t = os_malloc(sizeof(jsmntok_t)*TOKEN_COUNT);
+    char *json_str = request->bodystart;
+    int json_len = strlen(json_str);
+
+	memset(p, 0, sizeof(jsmn_parser));
+	memset(t, 0, sizeof(jsmntok_t)*128);
+
+    jsmn_init(p);
+    r = jsmn_parse(p, json_str, json_len, t, TOKEN_COUNT);
+    if (r < 0) {
+        ADDLOG_ERROR(LOG_FEATURE_API, "Failed to parse JSON: %d", r);
+        sprintf(tmp,"Failed to parse JSON: %d\n", r);
+        os_free(p);
+        os_free(t);
+        return http_rest_error(request, 400, tmp);
+    }
+
+    /* Assume the top-level element is an object */
+    if (r < 1 || t[0].type != JSMN_OBJECT) {
+        ADDLOG_ERROR(LOG_FEATURE_API, "Object expected", r);
+        sprintf(tmp,"Object expected\n");
+        os_free(p);
+        os_free(t);
+        return http_rest_error(request, 400, tmp);
+    }
+
+    /* Loop over all keys of the root object */
+    for (i = 1; i < r; i++) {
+        if (jsoneq(json_str, &t[i], "values") == 0) {
+            int j;
+            if (t[i + 1].type != JSMN_ARRAY) {
+                continue; /* We expect an array of channel values*/
+                /* mainly because I could not be bothered to work out how to use a sub-object right now */
+            }
+            for (j = 0; j < t[i + 1].size; j++) {
+                int chanval, pr;
+                jsmntok_t *g = &t[i + j + 2];
+                chanval = atoi(json_str + g->start);
+				pr = PIN_GetPinRoleForPinIndex(j);
+				if(pr) {
+                    CHANNEL_Set(j, chanval, 0);
+                    ADDLOG_DEBUG(LOG_FEATURE_API, "Set of chan %d to %d", j,
+                        chanval);
+				} else {
+                    if (chanval){
+                        ADDLOG_ERROR(LOG_FEATURE_API, "Set of chan %d to %d but no role", j,
+                            chanval);
+                    }
+                }
+            }
+            i += t[i + 1].size + 1;
+        } else {
+            ADDLOG_ERROR(LOG_FEATURE_API, "Unexpected key: %.*s", t[i].end - t[i].start,
+                json_str + t[i].start);
+        }
+    }
+
+    os_free(p);
+    os_free(t);
+    return http_rest_error(request, 200, "OK");
     return 0;
 }

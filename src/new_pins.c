@@ -158,7 +158,7 @@ void PIN_SaveToFlash() {
 	CONFIG_INIT_ITEM(CONFIG_TYPE_PINS, &pins);
 	config_save_item(&pins);
 	// delete old if it exists
-	config_delete_item(NEW_PINS_CONFIG);
+	config_delete_item(OLD_PINS_CONFIG);
 #endif
 }
 void PIN_LoadFromFlash() {
@@ -419,6 +419,7 @@ void Channel_OnChanged(int ch) {
 	int i;
 	int iVal;
 	int bOn;
+	int pwmIndex;
 
 
 	//bOn = BIT_CHECK(g_channelStates,ch);
@@ -443,7 +444,7 @@ void Channel_OnChanged(int ch) {
 				if(g_channelChangeCallback != 0) {
 					g_channelChangeCallback(ch,iVal);
 				}
-				int pwmIndex = PIN_GetPWMIndexForPinIndex(i);
+				pwmIndex = PIN_GetPWMIndexForPinIndex(i);
 
 #if WINDOWS
 	
