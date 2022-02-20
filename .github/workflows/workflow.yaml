@@ -75,7 +75,7 @@ jobs:
           sudo apt-get -y install libc6-i386 make
       - run: ls -la
       - name: Run make
-        run: make APP_VERSION=${{ needs.refs.outputs.version }} APP_NAME=${{ matrix.platform }} CI_PACKAGE_PATH=${{ env.GITHUB_WORKSPACE }}/output FW_NAME=${{ matrix.platform }} ${{ matrix.platform }}
+        run: make APP_VERSION=${{ needs.refs.outputs.version }} APP_NAME=${{ matrix.platform }} CI_PACKAGE_PATH=${{ github.workspace }}/output FW_NAME=${{ matrix.platform }} ${{ matrix.platform }}
       - name: Save build assets
         uses: actions/upload-artifact@v2
         with:
