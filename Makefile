@@ -18,12 +18,12 @@ APP_VERSION ?= dev_$(TIMESTAMP)
 #APPS_BUILD_PATH ?= ../bk7231t_os
 APPS_BUILD_CMD ?= build.sh
 
-# Default target is to run build
-all: build
+# Default target is to run OpenBK7231T build
+all: OpenBK7231T
 
 # Full target will clean then build all
 .PHONY: full
-full: clean build
+full: clean all
 
 # Update/init git submodules
 .PHONY: submodules
@@ -44,10 +44,7 @@ sdk/OpenXR809/project/oxr_sharedApp/shared:
 	ln -s "$(shell pwd)/" "sdk/OpenXR809/project/oxr_sharedApp/shared"
 
 
-# Build main binary
-.PHONY: build OpenBK7231T OpenBK7231N OpenXR809
-build: OpenBK7231T OpenBK7231N OpenXR809
-
+# Build main binaries
 OpenBK7231T:
 	$(MAKE) APP_NAME=OpenBK7231T TARGET_PLATFORM=bk7231t SDK_PATH=sdk/OpenBK7231T APPS_BUILD_PATH=../bk7231t_os build-BK7231
 
@@ -62,6 +59,8 @@ OpenXR809: submodules sdk/OpenXR809/project/oxr_sharedApp/shared sdk/OpenXR809/t
 	$(MAKE) -C sdk/OpenXR809/src install CC_DIR=$(PWD)/sdk/OpenXR809/tools/gcc-arm-none-eabi-4_9-2015q2/bin
 	$(MAKE) -C sdk/OpenXR809/project/oxr_sharedApp/gcc CC_DIR=$(PWD)/sdk/OpenXR809/tools/gcc-arm-none-eabi-4_9-2015q2/bin
 	$(MAKE) -C sdk/OpenXR809/project/oxr_sharedApp/gcc image CC_DIR=$(PWD)/sdk/OpenXR809/tools/gcc-arm-none-eabi-4_9-2015q2/bin
+	mkdir -p output/$(APP_VERSION)
+	cp sdk/OpenXR809/project/oxr_sharedApp/image/xr809/xr_system.img output/$(APP_VERSION)/OpenXR809_$(APP_VERSION).img
 
 .PHONY: build-BK7231
 build-BK7231: submodules $(SDK_PATH)/apps/$(APP_NAME)
@@ -69,10 +68,13 @@ build-BK7231: submodules $(SDK_PATH)/apps/$(APP_NAME)
 	rm $(SDK_PATH)/platforms/$(TARGET_PLATFORM)/toolchain/$(APPS_BUILD_PATH)/tools/generate/$(APP_NAME)_*.rbl || /bin/true
 	rm $(SDK_PATH)/platforms/$(TARGET_PLATFORM)/toolchain/$(APPS_BUILD_PATH)/tools/generate/$(APP_NAME)_*.bin || /bin/true
 
-# clean .o files
+# clean .o files and output directory
 .PHONY: clean
 clean: 
-	$(MAKE) -C sdk/platforms/$(TARGET_PLATFORM)/toolchain/$(APPS_BUILD_PATH) APP_BIN_NAME=$(APP_NAME) USER_SW_VER=$(APP_VERSION) clean
+	$(MAKE) -C sdk/OpenBK7231T/platforms/bk7231t/bk7231t_os APP_BIN_NAME=$(APP_NAME) USER_SW_VER=$(APP_VERSION) clean
+	$(MAKE) -C sdk/OpenBK7231N/platforms/bk7231n/bk7231n_os APP_BIN_NAME=$(APP_NAME) USER_SW_VER=$(APP_VERSION) clean
+	$(MAKE) -C sdk/OpenXR809/src clean
+	$(MAKE) -C sdk/OpenXR809/project/oxr_sharedApp/gcc clean
 	rm -rf output/*
 
 # Add custom Makefile if required
