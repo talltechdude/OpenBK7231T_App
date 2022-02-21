@@ -59,8 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        #platform: [OpenBK7231T, OpenBK7231N, OpenXR809]
-        platform: [OpenBK7231T, OpenBK7231N]
+        platform: [OpenBK7231T, OpenBK7231N, OpenXR809]
     steps:
       - name: Source checkout
         uses: actions/checkout@v2
@@ -83,6 +82,7 @@ jobs:
           path: |
             output/${{ needs.refs.outputs.version }}/${{ matrix.platform }}_UA_${{ needs.refs.outputs.version }}.bin
             output/${{ needs.refs.outputs.version }}/${{ matrix.platform }}_${{ needs.refs.outputs.version }}.rbl
+            output/${{ needs.refs.outputs.version }}/${{ matrix.platform }}_${{ needs.refs.outputs.version }}.img
           if-no-files-found: warn         
 
   release:
