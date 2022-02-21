@@ -14,16 +14,16 @@ APP_NAME ?= $(shell basename $(CURDIR))
 TIMESTAMP := $(shell date +%Y%m%d_%H%M%S)
 APP_VERSION ?= dev_$(TIMESTAMP)
 
-TARGET_PLATFORM ?= bk7231t
-APPS_BUILD_PATH ?= ../bk7231t_os
+#TARGET_PLATFORM ?= bk7231t
+#APPS_BUILD_PATH ?= ../bk7231t_os
 APPS_BUILD_CMD ?= build.sh
 
-# Default target is to run build
-all: build
+# Default target is to run OpenBK7231T build
+all: OpenBK7231T
 
 # Full target will clean then build all
 .PHONY: full
-full: clean build
+full: clean all
 
 # Update/init git submodules
 .PHONY: submodules
@@ -31,22 +31,50 @@ submodules:
 	git submodule update --init --recursive
 
 # Create symlink for App into SDK folder structure
-sdk/apps/$(APP_NAME):
-	@echo Create symlink for $(APP_NAME) into sdk/apps folder
-	ln -s "$(shell pwd)/" "sdk/apps/$(APP_NAME)"
+sdk/OpenBK7231T/apps/$(APP_NAME):
+	@echo Create symlink for $(APP_NAME) into sdk folder
+	ln -s "$(shell pwd)/" "sdk/OpenBK7231T/apps/$(APP_NAME)"
 
-# Build main binary
-.PHONY: build
-build: submodules sdk/apps/$(APP_NAME)
-	cd sdk/platforms/$(TARGET_PLATFORM)/toolchain/$(APPS_BUILD_PATH) && sh $(APPS_BUILD_CMD) $(APP_NAME) $(APP_VERSION) $(TARGET_PLATFORM)
-	rm sdk/platforms/$(TARGET_PLATFORM)/toolchain/$(APPS_BUILD_PATH)/tools/generate/$(APP_NAME)_*.rbl
-	rm sdk/platforms/$(TARGET_PLATFORM)/toolchain/$(APPS_BUILD_PATH)/tools/generate/$(APP_NAME)_*.bin
+sdk/OpenBK7231N/apps/$(APP_NAME):
+	@echo Create symlink for $(APP_NAME) into sdk folder
+	ln -s "$(shell pwd)/" "sdk/OpenBK7231N/apps/$(APP_NAME)"
 
-# clean .o files
+sdk/OpenXR809/project/oxr_sharedApp/shared:
+	@echo Create symlink for $(APP_NAME) into sdk folder
+	ln -s "$(shell pwd)/" "sdk/OpenXR809/project/oxr_sharedApp/shared"
+
+
+# Build main binaries
+OpenBK7231T:
+	$(MAKE) APP_NAME=OpenBK7231T TARGET_PLATFORM=bk7231t SDK_PATH=sdk/OpenBK7231T APPS_BUILD_PATH=../bk7231t_os build-BK7231
+
+OpenBK7231N:
+	$(MAKE) APP_NAME=OpenBK7231N TARGET_PLATFORM=bk7231n SDK_PATH=sdk/OpenBK7231N APPS_BUILD_PATH=../bk7231n_os build-BK7231
+
+sdk/OpenXR809/tools/gcc-arm-none-eabi-4_9-2015q2:
+	cd sdk/OpenXR809/tools && wget "https://launchpad.net/gcc-arm-embedded/4.9/4.9-2015-q2-update/+download/gcc-arm-none-eabi-4_9-2015q2-20150609-linux.tar.bz2" && tar -xf *.tar.bz2 && rm -f *.tar.bz2
+
+OpenXR809: submodules sdk/OpenXR809/project/oxr_sharedApp/shared sdk/OpenXR809/tools/gcc-arm-none-eabi-4_9-2015q2
+	$(MAKE) -C sdk/OpenXR809/src CC_DIR=$(PWD)/sdk/OpenXR809/tools/gcc-arm-none-eabi-4_9-2015q2/bin
+	$(MAKE) -C sdk/OpenXR809/src install CC_DIR=$(PWD)/sdk/OpenXR809/tools/gcc-arm-none-eabi-4_9-2015q2/bin
+	$(MAKE) -C sdk/OpenXR809/project/oxr_sharedApp/gcc CC_DIR=$(PWD)/sdk/OpenXR809/tools/gcc-arm-none-eabi-4_9-2015q2/bin
+	$(MAKE) -C sdk/OpenXR809/project/oxr_sharedApp/gcc image CC_DIR=$(PWD)/sdk/OpenXR809/tools/gcc-arm-none-eabi-4_9-2015q2/bin
+	mkdir -p output/$(APP_VERSION)
+	cp sdk/OpenXR809/project/oxr_sharedApp/image/xr809/xr_system.img output/$(APP_VERSION)/OpenXR809_$(APP_VERSION).img
+
+.PHONY: build-BK7231
+build-BK7231: submodules $(SDK_PATH)/apps/$(APP_NAME)
+	cd $(SDK_PATH)/platforms/$(TARGET_PLATFORM)/toolchain/$(APPS_BUILD_PATH) && sh $(APPS_BUILD_CMD) $(APP_NAME) $(APP_VERSION) $(TARGET_PLATFORM)
+	rm $(SDK_PATH)/platforms/$(TARGET_PLATFORM)/toolchain/$(APPS_BUILD_PATH)/tools/generate/$(APP_NAME)_*.rbl || /bin/true
+	rm $(SDK_PATH)/platforms/$(TARGET_PLATFORM)/toolchain/$(APPS_BUILD_PATH)/tools/generate/$(APP_NAME)_*.bin || /bin/true
+
+# clean .o files and output directory
 .PHONY: clean
 clean: 
-	$(MAKE) -C sdk/platforms/$(TARGET_PLATFORM)/toolchain/$(APPS_BUILD_PATH) APP_BIN_NAME=$(APP_NAME) USER_SW_VER=$(APP_VERSION) clean
-	rm -rf output/*
+	$(MAKE) -C sdk/OpenBK7231T/platforms/bk7231t/bk7231t_os APP_BIN_NAME=$(APP_NAME) USER_SW_VER=$(APP_VERSION) clean
+	$(MAKE) -C sdk/OpenBK7231N/platforms/bk7231n/bk7231n_os APP_BIN_NAME=$(APP_NAME) USER_SW_VER=$(APP_VERSION) clean
+	$(MAKE) -C sdk/OpenXR809/src clean
+	$(MAKE) -C sdk/OpenXR809/project/oxr_sharedApp/gcc clean
 
 # Add custom Makefile if required
 -include custom.mk
