@@ -75,7 +75,6 @@ clean:
 	$(MAKE) -C sdk/OpenBK7231N/platforms/bk7231n/bk7231n_os APP_BIN_NAME=$(APP_NAME) USER_SW_VER=$(APP_VERSION) clean
 	$(MAKE) -C sdk/OpenXR809/src clean
 	$(MAKE) -C sdk/OpenXR809/project/oxr_sharedApp/gcc clean
-	rm -rf output/*
 
 # Add custom Makefile if required
 -include custom.mk
