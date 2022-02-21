@@ -799,8 +799,7 @@ int HTTP_ProcessPacket(http_request_t *request) {
 			poststr(request,"Not available on Windows<br>");
 #elif PLATFORM_XR809
 			poststr(request,"TODO XR809<br>");
-#elif PLATFORM_BK7231N
-			poststr(request,"TODO BK7231N<br>");
+
 #elif PLATFORM_BK7231T
 			AP_IF_S *ar;
 			uint32_t num;
@@ -885,7 +884,6 @@ int HTTP_ProcessPacket(http_request_t *request) {
 		poststr(request,htmlReturnToCfg);
 		HTTP_AddBuildFooter(request);
 		poststr(request,htmlEnd);
-#ifndef PLATFORM_BK7231N
 	} else if(http_checkUrlBase(urlStr,"flash_read_tool")) {
 		int len = 16;
 		int ofs = 1970176;
@@ -973,7 +971,7 @@ int HTTP_ProcessPacket(http_request_t *request) {
 		poststr(request,htmlReturnToCfg);
 		HTTP_AddBuildFooter(request);
 		poststr(request,htmlEnd);
-#endif
+
 	} else if(http_checkUrlBase(urlStr,"cfg_quick")) {
 		http_setup(request, httpMimeTypeHTML);
 		poststr(request,htmlHeader);
