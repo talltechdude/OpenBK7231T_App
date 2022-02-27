@@ -23,25 +23,39 @@ build using:
 `./b.sh`
   
 you can also do advanced build by build_app.sh:
-`./build_app.sh apps/<folder> <appname> <appversion>`
-
+`./build_app.sh apps/<appname> <appname> <appversion>`
+(appname must be identical to foldername in apps/ folder)
+  
 e.g. `./build_app.sh apps/openbk7231app openbk7231app 1.0.0`
 
 # flashing for BK7231T
 
-## UART
+
+## UART (Windows only)
+
+get BKwriter 1.60 exe (extract zip) from here https://github.com/openshwprojects/OpenBK7231T
+  
+Use USB to TTL converter with 3.3V logic levels, like HW 597
+
+connect the PC to TX1 and RX1 on the bk7231 (TX2 and RX2 are optional, only for log)
+  
+start flash in BKwriter 1.60 (select COM port, etc)
+then re-power the device (or reset with CEN by temporary connecting CEN to ground) until the flashing program continues, repeat if required.
+  
+## UART (multiplatform method, Python required)
 
 clone the repo https://github.com/OpenBekenIOT/hid_download_py
+  
+Use USB to TTL converter with 3.3V logic levels, like HW 597 
 
-connect the PC to serial 2 on the bk7231
+connect the PC to TX1 and RX1 on the bk7231 (TX2 and RX2 are optional, only for log)
 
-flash using:
+start flash using:
 `python uartprogram <sdk folder>\apps\<folder>\output\1.0.0\<appname>_UA_<appversion>.bin -d <port> -w`
-re-power the device until the flashing program works, repeat if required.
+then re-power the device (or reset with CEN temporary connecting CEN to ground) until the flashing program continues, repeat if required.
 
 e.g.
 `python uartprogram C:\DataNoBackup\tuya\tuya-iotos-embeded-sdk-wifi-ble-bk7231t\apps\my_alpha_demo\output\1.0.0\my_alpha_demo_UA_1.0.0.bin -d com4 -w`
-
 
 ## SPI
 
@@ -53,11 +67,11 @@ Once the firmware has been flashed for the first time, it can be flashed over wi
 
 Setup a simple webserver to serve `<sdk folder>\apps\<folder>\output\1.0.0\<appname>_<appversion>.rbl`
 
-Visit <ip>/ota - this will start the flashing process.
+Visit <ip>/ota - here start the flashing process.
 
 ## First run
 
-At first boot, if the new formware does not find your wifi SSID and password in the Tuya flash, it will start as an access point.
+At first boot, if the new firmware does not find your wifi SSID and password in the Tuya flash, it will start as an access point.
 
 The access point will come up on 192.168.4.1, however some machines may not get an ip from it - you may need to configure your connecting for a staitc IP on that network, e.g. 192.168.4.10
 
@@ -65,7 +79,6 @@ Once you are connected and have an IP, go to http://192.168.4.1/index , select c
 
 After a reboot, the device should connect to your lan.
 
-  
  
 # Building for BK7231N
 
@@ -84,18 +97,42 @@ Flash BK7231N QIO binary, like that:
   
 `python uartprogram W:\GIT\OpenBK7231N\apps\OpenBK7231N_App\output\1.0.0\OpenBK7231N_app_QIO_1.0.0.bin --unprotect -d com10 -w --startaddr 0x0`
   
+  Remember - QIO binary with --unprotect and --startaddr 0x0, this is for N chip, not for T.
  
+You can see an example of detailed teardown and BK7231N flashing here (use google translate): https://www.elektroda.pl/rtvforum/viewtopic.php?t=3874289&highlight=
+  
 # Building for XR809
 
 Get XR809 SDK:
 https://github.com/openshwprojects/OpenXR809
 
-(to be continued)
+Checkout this repository to openxr809/project/oxr_sharedApp/shared/
   
+Run ./build_oxr_sharedapp.sh
+  
+# Flashing for XR809
+  
+Get USB to UART converter, start phoenixMC.exe from OpenXR809 repository and follow this guide: https://www.elektroda.com/rtvforum/topic3806769.html
   
 # Testing HTTP server on Windows
   
-It is also possible to build a part of our App for Windows platform. It basically creates a Windows .exe for our HTTP server, so developers can create our configurator, etc, pages faster, without having any Tuya modules at hand. For building on Windows, use MSVC projects in the app directory.
+It is also possible to build a part of our App for Windows platform. It basically creates a Windows .exe for our HTTP server, so developers can create our configurator, etc, pages faster, without having any Tuya modules at hand. For building on Windows, use MSVC projects in the app directory. It is using Winsock and creates a TCP listening socket on port 80, so make sure your machine has it free to use.
+  
+# Pin roles
+ 
+You can set pin roles in "Configure Module" section or use one of predefined templates from "Quick config" subpage.
+For each pin, you also set coresponding channel value. This is needed for modules with multiple relays. If you have 3 relays and 3 buttons, you need to use channel values like 1, 2, and 3. Just enter '1' in the text field, etc.
+Currently available pin roles:
+- Button 
+- Button_n (as Button but pin logical value is inversed)
+- Relay 
+- Relay_n (as Relay but pin logical value is inversed)
+- LED 
+- LED_n (as Led but pin logical value is inversed)
+- Button Toggle All - this button toggles all channels at once
+- Button Toggle All_n (as above but pin logical value is inversed)
+- PWM - pulse width modulation output for LED dimmers (with MQTT dimming support from Home Assistant)
+- WiFi LED - special LED to indicate WLan connection state
   
 # Futher reading
   

@@ -56,6 +56,22 @@ Connection: keep-alive
 
 #define DEFAULT_OTA_URL "http://raspberrypi:1880/firmware"
 
+// make sure that USER_SW_VER is set on all platforms
+#ifndef USER_SW_VER
+#ifdef WINDOWS
+#define USER_SW_VER "Win_Test"
+#elif PLATFORM_XR809
+#define USER_SW_VER "XR809_Test"
+#elif defined(PLATFORM_BK7231N)
+#define USER_SW_VER "BK7231N_Test"
+#elif defined(PLATFORM_BK7231T)
+#define USER_SW_VER "BK7231T_Test"
+#else
+#define USER_SW_VER "unknown"
+
+#endif
+#endif
+
 const char httpHeader[] = "HTTP/1.1 %d OK\nContent-type: %s" ;  // HTTP header
 const char httpMimeTypeHTML[] = "text/html" ;              // HTML MIME type
 const char httpMimeTypeText[] = "text/plain" ;           // TEXT MIME type
@@ -65,7 +81,7 @@ const char htmlHeader[] = "<!DOCTYPE html><html><body>" ;
 const char htmlEnd[] = "</body></html>" ;
 const char htmlReturnToMenu[] = "<a href=\"index\">Return to menu</a>";;
 const char htmlReturnToCfg[] = "<a href=\"cfg\">Return to cfg</a>";;
-const char *g_build_str = "Build on " __DATE__ " " __TIME__;
+const char *g_build_str = "Build on " __DATE__ " " __TIME__ " version " USER_SW_VER; // Show GIT version at Build line;
 
 const char httpCorsHeaders[] = "Access-Control-Allow-Origin: *\r\nAccess-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept" ;           // TEXT MIME type
 
@@ -268,6 +284,8 @@ const char *htmlPinRoleNames[] = {
 	"PWM",
 	"Wifi LED",
 	"Wifi LED_n",
+	"Btn_Tgl_All",
+	"Btn_Tgl_All_n",
 	"e",
 	"e",
 };
@@ -305,6 +323,7 @@ template_t g_templates [] = {
 	// BK7231N devices
 	{ Setup_Device_BK7231N_CB2S_QiachipSmartSwitch, "[BK7231N][CB2S] QiaChip Smart Switch"},
 	// BK7231T devices
+	{ Setup_Device_BK7231T_WB2S_QiachipSmartSwitch, "[BK7231T][WB2S] QiaChip Smart Switch"},
 	{ Setup_Device_TuyaWL_SW01_16A, "WL SW01 16A"},
 	{ Setup_Device_TuyaSmartLife4CH10A, "Smart Life 4CH 10A"},
 	{ Setup_Device_IntelligentLife_NF101A, "Intelligent Life NF101A"},
@@ -314,6 +333,7 @@ template_t g_templates [] = {
 	{ Setup_Device_ArlecCCTDownlight, "Arlec CCT LED Downlight ALD029CHA"},
 	{ Setup_Device_NedisWIFIPO120FWT_16A, "Nedis WIFIPO120FWT SmartPlug 16A"},
 	{ Setup_Device_NedisWIFIP130FWT_10A, "Nedis WIFIP130FWT SmartPlug 10A"},
+	{ Setup_Device_BK7231T_Raw_PrimeWiFiSmartOutletsOutdoor_CCWFIO232PK, "Prime SmartOutlet Outdoor 2x Costco"},
 	{ Setup_Device_EmaxHome_EDU8774, "Emax Home EDU8774 SmartPlug 16A"},
 	{ Setup_Device_TuyaSmartPFW02G, "Tuya Smart PFW02-G"}
 };
@@ -339,7 +359,7 @@ const char *g_header = "<h1><a href=\"https://github.com/openshwprojects/OpenBK7
 
 const char *g_header = "<h1>error</h1>";
 #error "Platform not supported"
-Platform not supported
+//Platform not supported
 #endif
 
 
@@ -817,7 +837,7 @@ int HTTP_ProcessPacket(http_request_t *request) {
 
 #else
 #error "Unknown platform"
-			poststr(request,Unknown platform<br>");
+			poststr(request,"Unknown platform<br>");
 #endif
 		}
 		poststr(request,"<form action=\"/cfg_wifi\">\
