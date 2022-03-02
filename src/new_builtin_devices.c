@@ -222,6 +222,12 @@ void Setup_Device_NedisWIFIP130FWT_10A() {
 	PIN_SaveToFlash();
 }
 
+// https://www.elektroda.com/rtvforum/topic3819498.html
+// 
+void Setup_Device_TH06_LCD_RTCC_WB3S() {
+
+}
+
 // https://www.elektroda.pl/rtvforum/topic3804553.html
 // SmartSwitch Emax Home EDU8774 16A 
 void Setup_Device_EmaxHome_EDU8774() {
@@ -287,7 +293,9 @@ void Setup_Device_BK7231T_WB2S_QiachipSmartSwitch() {
 
 
 // Strigona donation
+// Teardown article: https://www.elektroda.pl/rtvforum/viewtopic.php?p=19906670#19906670
 // https://obrazki.elektroda.pl/6606464600_1642467157.jpg
+// NOTE: It used to be ESP-based https://templates.blakadder.com/prime_CCWFIO232PK.html
 void Setup_Device_BK7231T_Raw_PrimeWiFiSmartOutletsOutdoor_CCWFIO232PK() {
 
 

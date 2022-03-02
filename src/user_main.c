@@ -34,6 +34,10 @@
 #include "ethernet_intf.h"
 
 /* Private includes ----------------------------------------------------------*/
+
+// overall config variables for app - like BK_LITTLEFS
+#include "obk_config.h"
+
 #include "tuya_device.h"
 #include "httpserver/new_http.h"
 #include "new_pins.h"
@@ -50,6 +54,7 @@
 #include "littlefs/our_lfs.h"
 
 #include "flash_config/flash_config.h"
+#include "flash_config/flash_vars_vars.h"
 
 #undef Malloc
 #undef Free
@@ -164,6 +169,10 @@ static void app_led_timer_handler(void *data)
     print_network_info();
   }
 
+  // when we hit 30s, mark as boot complete.
+  if (g_secondsElapsed == BOOT_COMPLETE_SECONDS){
+    boot_complete();
+  }
 
   if (g_openAP){
     g_openAP--;
@@ -320,9 +329,11 @@ void user_main(void)
 {
     OSStatus err;
 	int bForceOpenAP = 0;
+  int bootFailures = 0;
 	const char *wifi_ssid, *wifi_pass;
 
-  //OPERATE_RET op_ret = OPRT_OK;
+  // read or initialise the boot count flash area
+  increment_boot_count();
 
 	CFG_InitAndLoad();
 
@@ -341,6 +352,14 @@ void user_main(void)
 	// you can use this if you bricked your module by setting wrong access point data
 	bForceOpenAP = 1;
 #endif
+
+
+  bootFailures = boot_failures();
+  if (bootFailures > 3){
+    bForceOpenAP = 1;
+		ADDLOG_INFO(LOG_FEATURE_MAIN, "###### would force AP mode - boot failures %d", bootFailures);
+  }
+
 	if(*wifi_ssid == 0 || *wifi_pass == 0 || bForceOpenAP) {
 		// start AP mode in 5 seconds
 		g_openAP = 5;
@@ -367,21 +386,27 @@ void user_main(void)
 	ADDLOG_INFO(LOG_FEATURE_MAIN, "Initialised other callbacks\r\n");
 
 
-    // initialise rest interface
-    init_rest();
+#ifdef BK_LITTLEFS
+  // initialise the filesystem, only if present.
+  // don't create if it does not mount
+  init_lfs(0);
+#endif
 
-    // initialise MQTT - just sets up variables.
-    // all MQTT happens in timer thread?
-    MQTT_init();
+  // initialise rest interface
+  init_rest();
 
-    err = rtos_init_timer(&led_timer,
-                          1 * 1000,
-                          app_led_timer_handler,
-                          (void *)0);
-    ASSERT(kNoErr == err);
+  // initialise MQTT - just sets up variables.
+  // all MQTT happens in timer thread?
+  MQTT_init();
 
-    err = rtos_start_timer(&led_timer);
-    ASSERT(kNoErr == err);
+  err = rtos_init_timer(&led_timer,
+                        1 * 1000,
+                        app_led_timer_handler,
+                        (void *)0);
+  ASSERT(kNoErr == err);
+
+  err = rtos_start_timer(&led_timer);
+  ASSERT(kNoErr == err);
 	ADDLOG_INFO(LOG_FEATURE_MAIN, "started timer\r\n");
 }
 

@@ -3,6 +3,7 @@
 #include "../new_pins.h"
 #include "../new_cfg.h"
 #include "../logging/logging.h"
+#include <ctype.h>
 
 
 #undef os_printf
@@ -25,8 +26,31 @@
 #endif
 #endif
 
+
+int wal_stricmp(const char *a, const char *b) {
+  int ca, cb;
+  do {
+     ca = (unsigned char) *a++;
+     cb = (unsigned char) *b++;
+     ca = tolower(toupper(ca));
+     cb = tolower(toupper(cb));
+   } while ((ca == cb) && (ca != '\0'));
+   return ca - cb;
+}
+int wal_strnicmp(const char *a, const char *b, int count) {
+  int ca, cb;
+  do {
+     ca = (unsigned char) *a++;
+     cb = (unsigned char) *b++;
+     ca = tolower(toupper(ca));
+     cb = tolower(toupper(cb));
+     count--;
+   } while ((ca == cb) && (ca != '\0') && (count > 0));
+   return ca - cb;
+}
+
 // from mqtt.c
-extern void mqtt_disconnect_my2(mqtt_client_t *client);
+extern void mqtt_disconnect(mqtt_client_t *client);
 
 static int g_my_reconnect_mqtt_after_time = -1;
 ip_addr_t mqtt_ip LWIP_MQTT_EXAMPLE_IPADDR_INIT;
@@ -277,12 +301,13 @@ int tasCmnd(mqtt_request_t* request){
   p++;
 
   do{
-    if (!strncmp(p, "POWER", 5)){
+    // accept POWER and POWER0-n
+    if (!wal_strnicmp(p, "POWER", 5)){
       p += 5;
       if ((*p - '0' >= 0) && (*p - '0' <= 9)){
         channel = atoi(p);
       } else {
-        channel = -1;
+        channel = 0;
       }
       // if channel out of range, stop here.
       if ((channel < 0) || (channel > 32))  return 0;
@@ -291,6 +316,39 @@ int tasCmnd(mqtt_request_t* request){
       PR_NOTICE("MQTT client in tasCmnd data is %s for ch %i\n", copy, channel);
       iValue = atoi((char *)copy);
       CHANNEL_Set(channel,iValue,0);
+      break;
+    }
+
+    if (!wal_strnicmp(p, "COLOR", 5)){
+      p += 5;
+      if (copy[0] != '#'){
+        PR_NOTICE("tasCmnd COLOR expected a # prefixed color");
+      } else {
+        char *c = copy;
+        int val = 0;
+        int channel = 0;
+        c++;
+        while (*c){
+          char tmp[3];
+          int r;
+          tmp[0] = *(c++);
+          if (!*c) break;
+          tmp[1] = *(c++);
+          r = sscanf(tmp, "%x", &val);
+          if (!r) break;
+          // if this channel is not PWM, find a PWM channel;
+          while ((channel < 32) && (IOR_PWM != CHANNEL_GetRoleForChannel(channel))) {
+            channel ++;
+          }
+
+          if (channel >= 32) break;
+
+          val = (val * 100)/255;
+          CHANNEL_Set(channel, val, 0);
+          // move to next channel.
+          channel ++;
+        }
+      }
       break;
     }
 
@@ -309,7 +367,7 @@ static void MQTT_disconnect(mqtt_client_t *client)
 {
   if (!client) return;
   // this is what it was renamed to.  why?
-  mqtt_disconnect_my2(client);
+  mqtt_disconnect(client);
 }
 
 /* Called when publish is complete either with sucess or failure */
