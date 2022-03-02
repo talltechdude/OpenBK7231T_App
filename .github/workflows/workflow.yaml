@@ -23,6 +23,8 @@ jobs:
     steps:
       - name: Source checkout
         uses: actions/checkout@v2
+        with:
+          submodules: recursive        
       - name: Update SDKs if required
         run: make update-submodules        
       - name: Semantic Release
@@ -66,6 +68,8 @@ jobs:
     steps:
       - name: Source checkout
         uses: actions/checkout@v2
+        with:
+          submodules: recursive        
       - uses: actions/setup-python@v2
         with:
           python-version: '3.8'

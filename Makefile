@@ -28,12 +28,9 @@ full: clean all
 # Update/init git submodules
 .PHONY: submodules
 submodules:
-	git submodule update --init --recursive
+	git submodule update --init --recursive --remote
 
 update-submodules: submodules
-	cd sdk/OpenBK7231T && git checkout master && git pull -r
-	cd sdk/OpenBK7231N && git checkout master && git pull -r
-	cd sdk/OpenXR809 && git checkout master && git pull -r
 	git add sdk/OpenBK7231T sdk/OpenBK7231N sdk/OpenXR809
 ifdef GITHUB_ACTIONS
 	git config user.name github-actions
