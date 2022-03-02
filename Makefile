@@ -36,7 +36,7 @@ ifdef GITHUB_ACTIONS
 	git config user.name github-actions
 	git config user.email github-actions@github.com
 endif
-	-git commit -m "feat: update SDKs"
+	git commit -m "feat: update SDKs" && git push || echo "No changes to commit"
 
 # Create symlink for App into SDK folder structure
 sdk/OpenBK7231T/apps/$(APP_NAME):
