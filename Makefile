@@ -35,6 +35,10 @@ update-submodules:
 	cd sdk/OpenBK7231N && git pull -r
 	cd sdk/OpenXR809 && git pull -r
 	git add sdk/OpenBK7231T sdk/OpenBK7231N sdk/OpenXR809
+	ifdef GITHUB_ACTIONS
+		git config user.name github-actions
+		git config user.email github-actions@github.com
+	endif
 	-git commit -m "feat: update SDKs"
 
 # Create symlink for App into SDK folder structure
