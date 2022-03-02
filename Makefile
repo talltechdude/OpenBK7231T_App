@@ -30,7 +30,7 @@ full: clean all
 submodules:
 	git submodule update --init --recursive
 
-update-submodules:
+update-submodules: submodules
 	cd sdk/OpenBK7231T && git pull -r
 	cd sdk/OpenBK7231N && git pull -r
 	cd sdk/OpenXR809 && git pull -r
