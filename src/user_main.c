@@ -336,6 +336,9 @@ void user_main(void)
   increment_boot_count();
 
 	CFG_InitAndLoad();
+  
+  CHANNEL_Set(1, 100, 0);
+  CHANNEL_Set(2, 100, 0);
 
 	wifi_ssid = CFG_GetWiFiSSID();
 	wifi_pass = CFG_GetWiFiPass();
