@@ -18,11 +18,6 @@
 #define BTN_SHORT_TICKS       (300 /BTN_TICKS_INTERVAL)
 #define BTN_LONG_TICKS        (1000 /BTN_TICKS_INTERVAL)
 
-#ifndef PWM_FREQ
-	// #define PWM_FREQ			  1000 // Hz
-	#define PWM_FREQ		  15000.0f // Hz
-#endif
-
 typedef enum {
 	BTN_PRESS_DOWN = 0,
 	BTN_PRESS_UP,
@@ -411,24 +406,6 @@ void Channel_OnChanged(int ch) {
 				RAW_SetPinValue(i,!bOn);
 				bCallCb = 1;
 			}
-			if(g_pins.roles[i] == IOR_PWM) {
-				if(g_channelChangeCallback != 0) {
-					g_channelChangeCallback(ch,iVal);
-				}
-				pwmIndex = PIN_GetPWMIndexForPinIndex(i);
-
-#if WINDOWS
-	
-#elif PLATFORM_XR809
-
-#elif PLATFORM_BK7231N
-				bk_pwm_update_param(pwmIndex, PWM_FREQ, PWM_FREQ * iVal * 0.01f,0,0); // Duty cycle 0...100 * 10.0 = 0...1000
-
-#else
-				// they are using 1kHz PWM
-				// See: https://www.elektroda.pl/rtvforum/topic3798114.html
-				bk_pwm_update_param(pwmIndex, PWM_FREQ, PWM_FREQ * iVal * 0.01f); // Duty cycle 0...100 * 10.0 = 0...1000
-#endif
 			else if(g_cfg.pins.roles[i] == IOR_DigitalInput || g_cfg.pins.roles[i] == IOR_DigitalInput_n) {
 				bCallCb = 1;
 			}
@@ -436,6 +413,25 @@ void Channel_OnChanged(int ch) {
 				bCallCb = 1;
 			}
 			else if(g_cfg.pins.roles[i] == IOR_PWM) {
+				HAL_PIN_PWM_Update(i,iVal);
+				bCallCb = 1;
+			}
+		}
+	}
+	if(bCallCb) {
+		if(g_channelChangeCallback != 0) {
+			g_channelChangeCallback(ch,iVal);
+		}
+	}
+}
+int CHANNEL_Get(int ch) {
+	if(ch < 0 || ch >= CHANNEL_MAX) {
+		addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL,"CHANNEL_Get: Channel index %i is out of range <0,%i)\n\r",ch,CHANNEL_MAX);
+		return 0;
+	}
+	return g_channelValues[ch];
+}
+
 void CHANNEL_Set(int ch, int iVal, int bForce) {
 	if(ch < 0 || ch >= CHANNEL_MAX) {
 		addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL,"CHANNEL_Set: Channel index %i is out of range <0,%i)\n\r",ch,CHANNEL_MAX);
@@ -445,6 +441,7 @@ void CHANNEL_Set(int ch, int iVal, int bForce) {
 		int prevVal;
 
 		prevVal = g_channelValues[ch];
+		if(prevVal == iVal) {
 			addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"No change in channel %i (still set to %i) - ignoring\n\r",ch, prevVal);
 			return;
 		}
@@ -803,6 +800,3 @@ void PIN_set_wifi_led(int value){
 		RAW_SetPinValue(res, value & 1);
 	}
 }
-
-
-
