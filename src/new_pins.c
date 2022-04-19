@@ -13,6 +13,11 @@
 #define BTN_SHORT_TICKS       (300 /BTN_TICKS_INTERVAL)
 #define BTN_LONG_TICKS        (1000 /BTN_TICKS_INTERVAL)
 
+#ifndef PWM_FREQ
+	// #define PWM_FREQ			  1000 // Hz
+	#define PWM_FREQ		  15000.0f // Hz
+#endif
+
 typedef enum {
 	BTN_PRESS_DOWN = 0,
 	BTN_PRESS_UP,
@@ -560,7 +565,7 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 			bk_pwm_start(pwmIndex);
 			f = g_channelValues[channelIndex] * 0.01f;
 			// OSStatus bk_pwm_update_param(bk_pwm_t pwm, uint32_t frequency, uint32_t duty_cycle1, uint32_t duty_cycle2, uint32_t duty_cycle3)
-			bk_pwm_update_param(pwmIndex, 1000, f * 1000.0f,0,0);
+			bk_pwm_update_param(pwmIndex, PWM_FREQ, PWM_FREQ * f,0,0);
 
 #else
 			bk_pwm_start(pwmIndex);
@@ -569,7 +574,7 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 		//	bk_pwm_update_param(pwmIndex, 1000, g_channelValues[channelIndex]);
 			f = g_channelValues[channelIndex] * 0.01f;
 			// OSStatus bk_pwm_update_param(bk_pwm_t pwm, uint32_t frequency, uint32_t duty_cycle)
-			bk_pwm_update_param(pwmIndex, 1000, f * 1000.0f);
+			bk_pwm_update_param(pwmIndex, PWM_FREQ, PWM_FREQ * f);
 
 #endif
 		}
@@ -624,12 +629,12 @@ void Channel_OnChanged(int ch) {
 #elif PLATFORM_XR809
 
 #elif PLATFORM_BK7231N
-				bk_pwm_update_param(pwmIndex, 1000, iVal * 10.0f,0,0); // Duty cycle 0...100 * 10.0 = 0...1000
+				bk_pwm_update_param(pwmIndex, PWM_FREQ, PWM_FREQ * iVal * 0.01f,0,0); // Duty cycle 0...100 * 10.0 = 0...1000
 
 #else
 				// they are using 1kHz PWM
 				// See: https://www.elektroda.pl/rtvforum/topic3798114.html
-				bk_pwm_update_param(pwmIndex, 1000, iVal * 10.0f); // Duty cycle 0...100 * 10.0 = 0...1000
+				bk_pwm_update_param(pwmIndex, PWM_FREQ, PWM_FREQ * iVal * 0.01f); // Duty cycle 0...100 * 10.0 = 0...1000
 #endif
 			}
 			
