@@ -670,6 +670,29 @@ void PIN_ticks(void *param)
 	}
 
 
+	// WiFi LED
+	// In Open Access point mode, fast blink (250ms)
+	if(Main_IsOpenAccessPointMode()) {
+		g_wifiLedToggleTime += 5;
+		if(g_wifiLedToggleTime > 200) {
+			g_wifi_ledState = !g_wifi_ledState;
+			g_wifiLedToggleTime = 0;
+			PIN_set_wifi_led(g_wifi_ledState);
+		}
+	} else if(Main_IsConnectedToWiFi()) {
+		// In WiFi client success mode, just stay enabled
+		PIN_set_wifi_led(1);
+	} else {
+		// in connecting mode, slow blink
+		g_wifiLedToggleTime += 5;
+		if(g_wifiLedToggleTime > 500) {
+			g_wifi_ledState = !g_wifi_ledState;
+			g_wifiLedToggleTime = 0;
+			PIN_set_wifi_led(g_wifi_ledState);
+		}
+	}
+
+
 	for(i = 0; i < PLATFORM_GPIO_MAX; i++) {
 #if 1
 		if(g_cfg.pins.roles[i] == IOR_PWM) {
@@ -826,17 +849,3 @@ void PIN_Init(void)
 	CMD_RegisterCommand("setChannelType", NULL, CMD_SetChannelType, "qqqqqqqq", NULL);
 	CMD_RegisterCommand("showChannelValues", NULL,CMD_ShowChannelValues, "log channel values", NULL);
 }
-void PIN_set_wifi_led(int value){
-	int i;
-	for ( i = 0; i < PLATFORM_GPIO_MAX; i++){
-		if (g_cfg.pins.roles[i] == IOR_LED_WIFI){
-			RAW_SetPinValue(i, value);
-		} else if (g_cfg.pins.roles[i] == IOR_LED_WIFI_n){
-			// inversed
-			RAW_SetPinValue(i, !value);
-		}
-	}
-}
-
-
-
