@@ -28,7 +28,7 @@ analyzeCommits:
       release: "major"
     - type: "chore"
       release: "patch"
-    - subject: "*"
+    - message: "*"
       release: "patch"
 generateNotes:
   - path: "@semantic-release/release-notes-generator"
