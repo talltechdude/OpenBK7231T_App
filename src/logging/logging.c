@@ -1,26 +1,56 @@
 
 // Trying to narrow down Boozeman crash.
 // Is the code with this define enabled crashing/freezing BK after few minutes for anybody?
-// #define DEBUG_USE_SIMPLE_LOGGER
+
 #include "../new_common.h"
 #include "../httpserver/new_http.h"
-#include "str_pub.h"
 #include "../logging/logging.h"
+// Commands register, execution API and cmd tokenizer
+#include "../cmnds/cmd_public.h"
 
-SemaphoreHandle_t g_mutex = 0;
 static char tmp[1024];
 int loglevel = 4; // default to info
-unsigned int logfeatures = 0xffffffff;
+unsigned int logfeatures = (
+    (1 << 0) |
+    (1 << 1) |
+    (1 << 2) |
+    (1 << 3) |
+    (1 << 4) |
+    (1 << 5) |
+    (1 << 6) |
+    (1 << 7) |
+    (1 << 8) |
+    (0 << 9) | // disable LFS by default
+    (1 << 10) |
+    (1 << 11) |
+    (1 << 12) |
+    (1 << 13) |
+    (1 << 14) |
+    (1 << 15) | 
+    (1 << 16) | 
+    (1 << 17) | 
+    (1 << 18) | 
+    (1 << 19) | 
+    (1 << 20) | 
+    (1 << 21) | 
+    (1 << 22) | 
+    (1 << 23) | 
+    (1 << 24)
+);
+static int log_delay = 0;
 
+// must match header definitions in logging.h
 char *loglevelnames[] = {
     "NONE:",
     "Error:",
     "Warn:",
     "Info:",
     "Debug:",
+    "ExtraDebug:",
     "All:"
 };
 
+// must match header definitions in logging.h
 char *logfeaturenames[] = {
     "HTTP:",//            = 0,
     "MQTT:",//            = 1,
@@ -32,32 +62,47 @@ char *logfeaturenames[] = {
     "GEN:", //              = 7
     "API:", // = 8
     "LFS:", // = 9
+    "CMD:", // = 10
+    "NTP:", // = 11
+	"TuyaMCU:",// = 12
+	"I2C:",// = 13
+	"BL0942:",// = 14
 };
 
-#ifdef DEBUG_USE_SIMPLE_LOGGER
 
-void addLog(char *fmt, ...){
+int direct_serial_log = DEFAULT_DIRECT_SERIAL_LOG;
+
+#ifdef WINDOWS
+
+
+void addLogAdv(int level, int feature, char *fmt, ...){
     va_list argList;
-    BaseType_t taken;
-
-	if(g_mutex == 0)
-	{
-		g_mutex = xSemaphoreCreateMutex( );
-	}
-	// TODO: semaphore
-
-    taken = xSemaphoreTake( g_mutex, 100 );
-    if (taken == pdTRUE) {
-
-		va_start(argList, fmt);
-		vsprintf(tmp, fmt, argList);
-		va_end(argList);
-		bk_printf(tmp);
-		bk_printf("\r");
-
-        xSemaphoreGive( g_mutex );
+    char *t = tmp;
+    if (!((1<<feature) & logfeatures)){
+        return;
     }
+    if (level > loglevel){
+        return;
+    }
+    strcpy(t, loglevelnames[level]);
+    t += strlen(t);
+    if (feature < sizeof(logfeaturenames)/sizeof(*logfeaturenames)){
+        strcpy(t, logfeaturenames[feature]);
+        t += strlen(t);
+    }
+    va_start(argList, fmt);
+    vsprintf(t, fmt, argList);
+    va_end(argList);
+
+    printf(tmp);
+    printf("\r\n");
 }
+
+#else // from WINDOWS
+
+SemaphoreHandle_t g_mutex = 0;
+
+#ifdef DEBUG_USE_SIMPLE_LOGGER
 
 void addLogAdv(int level, int feature, char *fmt, ...){
     va_list argList;
@@ -78,20 +123,23 @@ void addLogAdv(int level, int feature, char *fmt, ...){
     taken = xSemaphoreTake( g_mutex, 100 );
     if (taken == pdTRUE) {
 
-		va_start(argList, fmt);
-		vsprintf(tmp, fmt, argList);
-		va_end(argList);
         strcpy(t, loglevelnames[level]);
         t += strlen(t);
         if (feature < sizeof(logfeaturenames)/sizeof(*logfeaturenames)){
             strcpy(t, logfeaturenames[feature]);
             t += strlen(t);
         }
+		va_start(argList, fmt);
+		vsprintf(t, fmt, argList);
+		va_end(argList);
 
 		bk_printf(tmp);
-		bk_printf("\r");
+		bk_printf("\r\n");
 
         xSemaphoreGive( g_mutex );
+        if (log_delay){
+            rtos_delay_milliseconds(log_delay);
+        }
     }
 }
 #else
@@ -120,12 +168,10 @@ static struct tag_logMemory {
     SemaphoreHandle_t mutex;
 } logMemory;
 
-int direct_serial_log = DEFAULT_DIRECT_SERIAL_LOG;
 
 static int initialised = 0; 
-static char tmp[1024];
 
-static void initLog() {
+static void initLog( void ) {
     bk_printf("Entering init log...\r\n");
     logMemory.head = logMemory.tailserial = logMemory.tailtcp = logMemory.tailhttp = 0; 
     logMemory.mutex = xSemaphoreCreateMutex( );
@@ -135,59 +181,14 @@ static void initLog() {
     HTTP_RegisterCallback( "/logs", HTTP_GET, http_getlog);
     HTTP_RegisterCallback( "/lograw", HTTP_GET, http_getlograw);
     bk_printf("Init log done!\r\n");
+
+    CMD_RegisterCommand("loglevel", "", log_command, "set log level <0..6>", NULL);
+    CMD_RegisterCommand("logfeature", "", log_command, "set log feature filter, <0..10> <0|1>", NULL);
+    CMD_RegisterCommand("logtype", "", log_command, "logtype direct|all - direct logs only to serial immediately", NULL);
+    CMD_RegisterCommand("logdelay", "", log_command, "logdelay 0..n - impose ms delay after every log", NULL);
+    
+    bk_printf("Commands registered!\r\n");
 }
-
-// adds a log to the log memory
-// if head collides with either tail, move the tails on.
-void addLog(char *fmt, ...){
-    int len;
-    va_list argList;
-    BaseType_t taken;
-    // if not initialised, direct output
-    if (!initialised) {
-        initLog();
-    }
-    taken = xSemaphoreTake( logMemory.mutex, 100 );
-
-    va_start(argList, fmt);
-    vsprintf(tmp, fmt, argList);
-    va_end(argList);
-
-    len = strlen(tmp);
-    tmp[len++] = '\r';
-    tmp[len++] = '\n';
-    tmp[len] = '\0';
-
-    if (direct_serial_log){
-        bk_printf(tmp);
-        if (taken == pdTRUE){
-            xSemaphoreGive( logMemory.mutex );
-        }
-        return;
-    }
-
-    //bk_printf("addlog %d.%d.%d %d:%s\n", logMemory.head, logMemory.tailserial, logMemory.tailtcp, len,tmp);
-
-    for (int i = 0; i < len; i++){
-        logMemory.log[logMemory.head] = tmp[i];
-        logMemory.head = (logMemory.head + 1) % LOGSIZE;
-        if (logMemory.tailserial == logMemory.head){
-            logMemory.tailserial = (logMemory.tailserial + 1) % LOGSIZE;
-        }
-        if (logMemory.tailtcp == logMemory.head){
-            logMemory.tailtcp = (logMemory.tailtcp + 1) % LOGSIZE;
-        }
-        if (logMemory.tailhttp == logMemory.head){
-            logMemory.tailhttp = (logMemory.tailhttp + 1) % LOGSIZE;
-        }
-    }
-
-    if (taken == pdTRUE){
-        xSemaphoreGive( logMemory.mutex );
-    }
-}
-
-
 
 
 // adds a log to the log memory
@@ -222,16 +223,24 @@ void addLogAdv(int level, int feature, char *fmt, ...){
     int len = strlen(tmp);
     tmp[len++] = '\r';
     tmp[len++] = '\n';
+    tmp[len] = '\0';
+#if PLATFORM_XR809
+    printf(tmp);
+#endif
+//#if PLATFORM_BL602
+//    printf(tmp);
+//#endif
 
-#ifdef DIRECTLOG
-    bk_printf(tmp);
-    if (taken == pdTRUE){
-        xSemaphoreGive( logMemory.mutex );
+    if (direct_serial_log){
+        bk_printf(tmp);
+        if (taken == pdTRUE){
+            xSemaphoreGive( logMemory.mutex );
+        }
+        if (log_delay){
+            rtos_delay_milliseconds(log_delay);
+        }
+        return;
     }
-    return;
-#endif    
-
-    //bk_printf("addlog %d.%d.%d %d:%s\n", logMemory.head, logMemory.tailserial, logMemory.tailtcp, len,tmp);
 
     for (int i = 0; i < len; i++){
         logMemory.log[logMemory.head] = tmp[i];
@@ -250,6 +259,10 @@ void addLogAdv(int level, int feature, char *fmt, ...){
     if (taken == pdTRUE){
         xSemaphoreGive( logMemory.mutex );
     }
+    if (log_delay){
+        rtos_delay_milliseconds(log_delay);
+    }
+
 }
 
 
@@ -292,7 +305,7 @@ static int getTcp(char *buff, int buffsize){
 
 static int getHttp(char *buff, int buffsize){
     int len = getData(buff, buffsize, &logMemory.tailhttp);
-    //bk_printf("got tcp: %d:%s\r\n", len,buff);
+    //printf("got tcp: %d:%s\r\n", len,buff);
     return len;
 }
 
@@ -358,10 +371,10 @@ void log_server_thread( beken_thread_arg_t arg )
             if ( client_fd >= 0 )
             {
                 os_strcpy( client_ip_str, inet_ntoa( client_addr.sin_addr ) );
-                addLog( "TCP Log Client %s:%d connected, fd: %d", client_ip_str, client_addr.sin_port, client_fd );
+                //addLog( "TCP Log Client %s:%d connected, fd: %d", client_ip_str, client_addr.sin_port, client_fd );
                 if ( kNoErr
                      != rtos_create_thread( NULL, BEKEN_APPLICATION_PRIORITY, 
-							                     "TCP Clients",
+							                     "Logging TCP Client",
                                                  (beken_thread_function_t)log_client_thread,
                                                  0x800, 
                                                  (beken_thread_arg_t)client_fd ) ) 
@@ -373,8 +386,9 @@ void log_server_thread( beken_thread_arg_t arg )
         }
     }
 	
-    if ( err != kNoErr ) 
-		addLog( "Server listerner thread exit with err: %d", err );
+    if ( err != kNoErr ) {
+		//addLog( "Server listener thread exit with err: %d", err );
+    }
 	
     close( tcp_listen_fd );
     rtos_delete_thread( NULL );
@@ -385,7 +399,6 @@ static char tcplogbuf[TCPLOGBUFSIZE];
 static void log_client_thread( beken_thread_arg_t arg )
 {
     int fd = (int) arg;
-    int len = 0;
     while ( 1 ){
         int count = getTcp(tcplogbuf, TCPLOGBUFSIZE);
         if (count){
@@ -398,7 +411,7 @@ static void log_client_thread( beken_thread_arg_t arg )
         rtos_delay_milliseconds(10);
     }
 	
-	addLog( "TCP client thread exit with err: %d", len );
+	//addLog( "TCP client thread exit with err: %d", len );
 	
     close( fd );
     rtos_delete_thread( NULL );
@@ -454,6 +467,75 @@ static int http_getlog(http_request_t *request){
 }
 
 
+int log_command(const void *context, const char *cmd, const char *args){
+    int result = 0;
+    if (!cmd) return -1;
+    if (!args) return -1;
+    do{
+        if (!stricmp(cmd, "loglevel")){
+            int res, level;
+            res = sscanf(args, "%d", &level);
+            if (res == 1){
+                if ((level >= 0) && (level <= 9)){
+                    loglevel = level;
+                    result = 1;
+                    ADDLOG_DEBUG(LOG_FEATURE_CMD, "loglevel set %d", level);
+                } else {
+                    ADDLOG_ERROR(LOG_FEATURE_CMD, "loglevel %d out of range", level);
+                    result = -1;
+                }
+            } else {
+                ADDLOG_ERROR(LOG_FEATURE_CMD, "loglevel %s invalid?", args);
+                result = -1;
+            }
+            break;
+        }
+        if (!stricmp(cmd, "logfeature")){
+            int res, feat;
+            int val = 1;
+            res = sscanf(args, "%d %d", &feat, &val);
+            if (res >= 1){
+                if ((feat >= 0) && (feat < LOG_FEATURE_MAX)){
+                    logfeatures &= ~(1 << feat);
+                    if (val){
+                        logfeatures |= (1 << feat);
+                    }
+                    ADDLOG_DEBUG(LOG_FEATURE_CMD, "logfeature set 0x%08X", logfeatures);
+                    result = 1;
+                } else {
+                    ADDLOG_ERROR(LOG_FEATURE_CMD, "logfeature %d out of range", feat);
+                    result = -1;
+                }
+            } else {
+                ADDLOG_ERROR(LOG_FEATURE_CMD, "logfeature %s invalid?", args);
+                result = -1;
+            }
+            break;
+        }
+        if (!stricmp(cmd, "logtype")){
+            if (!strcmp(args, "direct")){
+                direct_serial_log = 1;
+            } else {
+                direct_serial_log = 0;
+            }
+            break;
+        }
+        if (!stricmp(cmd, "logdelay")){
+            int res, delay;
+            res = sscanf(args, "%d", &delay);
+            if (res == 1){
+                log_delay = delay;
+            } else {
+                log_delay = 0;
+            }
+            break;
+        }
+
+    } while (0);
+
+    return result;
+}
 
 
-#endif
+#endif // else from simple logger
+#endif // else from windows

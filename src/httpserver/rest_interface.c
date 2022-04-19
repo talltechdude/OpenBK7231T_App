@@ -3,21 +3,32 @@
 #include "../new_common.h"
 #include "../logging/logging.h"
 #include "../httpserver/new_http.h"
-//#include "str_pub.h"
 #include "../new_pins.h"
 #include "../jsmn/jsmn_h.h"
 #include "../ota/ota.h"
-#include "../printnetinfo/printnetinfo.h"
+#include "../hal/hal_wifi.h"
+#include "../hal/hal_flashVars.h"
 #ifdef BK_LITTLEFS
 #include "../littlefs/our_lfs.h"
 #endif
 #include "lwip/sockets.h"
-#include "../flash_config/flash_config.h"
-#include "../new_cfg.h"
-#include "../flash_config/flash_vars_vars.h"
-#include "../flash_config/flash_vars.h"
+#if PLATFORM_XR809
+    #include <image/flash.h>
+#elif PLATFORM_BL602
 
+#else
+#endif
+#include "../new_cfg.h"
+// Commands register, execution API and cmd tokenizer
+#include "../cmnds/cmd_public.h"
+
+#if PLATFORM_XR809
+uint32_t flash_read(uint32_t flash, uint32_t addr,void *buf, uint32_t size);
+#define FLASH_INDEX_XR809 0
+#elif PLATFORM_BL602
+#else
 extern UINT32 flash_read(char *user_buf, UINT32 count, UINT32 address);
+#endif
 
 static int http_rest_error(http_request_t *request, int code, char *msg);
 
@@ -55,6 +66,7 @@ static int http_rest_get_channels(http_request_t *request);
 
 static int http_rest_get_flash_vars_test(http_request_t *request);
 
+static int http_rest_post_cmd(http_request_t *request);
 
 
 void init_rest(){
@@ -79,6 +91,11 @@ const char * apppage2 = "';"
 const char *obktype = "XR809";
 const char * apppage2 = "';"
 "            var obktype = 'XR809';"
+"            var device = 'http://";
+#elif PLATFORM_BL602
+const char *obktype = "BL602";
+const char * apppage2 = "';"
+"            var obktype = 'BL602';"
 "            var device = 'http://";
 #else
 const char *obktype = "beken";
@@ -178,11 +195,22 @@ static int http_rest_post(http_request_t *request){
         return http_rest_post_reboot(request);
     }
     if (!strcmp(request->url, "api/ota")){
-        return http_rest_post_flash(request, 0x132000);
+#if PLATFORM_BK7231T
+        return http_rest_post_flash(request, START_ADR_OF_BK_PARTITION_OTA);
+#elif PLATFORM_BK7231N
+        return http_rest_post_flash(request, START_ADR_OF_BK_PARTITION_OTA);
+#else
+		// TODO
+#endif
     }
     if (!strncmp(request->url, "api/flash/", 10)){
         return http_rest_post_flash_advanced(request);
     }
+
+    if (!strcmp(request->url, "api/cmnd")){
+        return http_rest_post_cmd(request);
+    }
+    
 
 #ifdef BK_LITTLEFS
     if (!strcmp(request->url, "api/fsblock")){
@@ -222,7 +250,7 @@ static int http_rest_post(http_request_t *request){
 
 static int http_rest_app(http_request_t *request){
     const char *webhost = CFG_GetWebappRoot();
-    const char *ourip = getMyIp(); //CFG_GetOurIP();
+    const char *ourip = HAL_GetMyIPString(); //CFG_GetOurIP();
     http_setup(request, httpMimeTypeHTML);
     if (webhost && ourip){
         poststr(request, apppage1);
@@ -277,51 +305,104 @@ static int http_rest_get_lfs_file(http_request_t *request){
     file = os_malloc(sizeof(lfs_file_t));
     memset(file, 0, sizeof(lfs_file_t));
 
-    strncpy(fpath, request->url + strlen("api/lfs/"), 63);
+    strcpy(fpath, request->url + strlen("api/lfs/"));
+    
     ADDLOG_DEBUG(LOG_FEATURE_API, "LFS read of %s", fpath);
     lfsres = lfs_file_open(&lfs, file, fpath, LFS_O_RDONLY);
-    if (lfsres >= 0){
-        const char *mimetype = httpMimeTypeBinary;
-        do {
-            if (EndsWith(fpath, ".ico")){
-                mimetype = "image/x-icon";
-                break;
-            }
-            if (EndsWith(fpath, ".js")){
-                mimetype = "text/javascript";
-                break;
-            }
-            if (EndsWith(fpath, ".json")){
-                mimetype = httpMimeTypeJson;
-                break;
-            }
-            if (EndsWith(fpath, ".html")){
-                mimetype = "text/html";
-                break;
-            }
-            if (EndsWith(fpath, ".vue")){
-                mimetype = "application/javascript";
-                break;
-            }
-            break;
-        } while (0);
 
-        http_setup(request, mimetype);
-        do {
-            len = lfs_file_read(&lfs, file, buff, 1024);
-            total += len;
-            if (len){
-                //ADDLOG_DEBUG(LOG_FEATURE_API, "%d bytes read", len);
-                postany(request, buff, len);
-            }
-        } while (len > 0);
-        lfs_file_close(&lfs, file);
-        ADDLOG_DEBUG(LOG_FEATURE_API, "%d total bytes read", total);
+    if (lfsres == -21){
+        lfs_dir_t *dir;
+        ADDLOG_DEBUG(LOG_FEATURE_API, "%s is a folder", fpath);
+        dir = os_malloc(sizeof(lfs_dir_t));
+        os_memset(dir, 0, sizeof(*dir));
+        // if the thing is a folder.
+        lfsres = lfs_dir_open(&lfs, dir, fpath);
+
+        if (lfsres >= 0){
+            // this is needed during iteration...?
+            struct lfs_info info;
+            int count = 0;
+            http_setup(request, httpMimeTypeJson);
+            ADDLOG_DEBUG(LOG_FEATURE_API, "opened folder %s lfs result %d", fpath, lfsres);
+            hprintf128(request, "{\"dir\":\"%s\",\"content\":[", fpath);
+            do {
+                // Read an entry in the directory
+                //
+                // Fills out the info structure, based on the specified file or directory.
+                // Returns a positive value on success, 0 at the end of directory,
+                // or a negative error code on failure.
+                lfsres = lfs_dir_read(&lfs, dir, &info);
+                if (lfsres > 0){
+                    if (count) poststr(request, ",");
+                    hprintf128(request, "{\"name\":\"%s\",\"type\":%d,\"size\":%d}", 
+                        info.name, info.type, info.size);
+                } else {
+                    if (lfsres < 0){
+                        if (count) poststr(request, ",");
+                        hprintf128(request, "{\"error\":%d}", lfsres); 
+                    }
+                }
+                count++;
+            } while (lfsres > 0);
+
+            hprintf128(request, "]}");
+
+            lfs_dir_close(&lfs, dir);
+            if (dir) os_free(dir);
+            dir = NULL;
+        } else {
+            if (dir) os_free(dir);
+            dir = NULL;
+            request->responseCode = HTTP_RESPONSE_NOT_FOUND;
+            http_setup(request, httpMimeTypeJson);
+            ADDLOG_DEBUG(LOG_FEATURE_API, "failed to open %s lfs result %d", fpath, lfsres);
+            hprintf128(request, "{\"fname\":\"%s\",\"error\":%d}", fpath, lfsres);
+        }
     } else {
-        request->responseCode = HTTP_RESPONSE_NOT_FOUND;
-        http_setup(request, httpMimeTypeJson);
-        ADDLOG_DEBUG(LOG_FEATURE_API, "failed to open %s lfs result %d", fpath, lfsres);
-        hprintf128(request, "{\"fname\":\"%s\",\"error\":%d}", fpath, lfsres);
+        ADDLOG_DEBUG(LOG_FEATURE_API, "LFS open [%s] gives %d", fpath, lfsres);
+        if (lfsres >= 0){
+            const char *mimetype = httpMimeTypeBinary;
+            do {
+                if (EndsWith(fpath, ".ico")){
+                    mimetype = "image/x-icon";
+                    break;
+                }
+                if (EndsWith(fpath, ".js")){
+                    mimetype = "text/javascript";
+                    break;
+                }
+                if (EndsWith(fpath, ".json")){
+                    mimetype = httpMimeTypeJson;
+                    break;
+                }
+                if (EndsWith(fpath, ".html")){
+                    mimetype = "text/html";
+                    break;
+                }
+                if (EndsWith(fpath, ".vue")){
+                    mimetype = "application/javascript";
+                    break;
+                }
+                break;
+            } while (0);
+
+            http_setup(request, mimetype);
+            do {
+                len = lfs_file_read(&lfs, file, buff, 1024);
+                total += len;
+                if (len){
+                    //ADDLOG_DEBUG(LOG_FEATURE_API, "%d bytes read", len);
+                    postany(request, buff, len);
+                }
+            } while (len > 0);
+            lfs_file_close(&lfs, file);
+            ADDLOG_DEBUG(LOG_FEATURE_API, "%d total bytes read", total);
+        } else {
+            request->responseCode = HTTP_RESPONSE_NOT_FOUND;
+            http_setup(request, httpMimeTypeJson);
+            ADDLOG_DEBUG(LOG_FEATURE_API, "failed to open %s lfs result %d", fpath, lfsres);
+            hprintf128(request, "{\"fname\":\"%s\",\"error\":%d}", fpath, lfsres);
+        }
     }
     poststr(request,NULL);
     if (fpath) os_free(fpath);
@@ -355,6 +436,7 @@ static int http_rest_post_lfs_file(http_request_t *request){
         int folderlen = folder - fpath;
         folder = os_malloc(folderlen+1);
         strncpy(folder, fpath, folderlen);
+        folder[folderlen] = 0;
         ADDLOG_DEBUG(LOG_FEATURE_API, "file is in folder %s try to create", folder);
         lfsres = lfs_mkdir(&lfs, folder);
         if (lfsres < 0){
@@ -429,6 +511,7 @@ static int http_favicon(http_request_t *request){
     request->responseCode = HTTP_RESPONSE_NOT_FOUND;
     http_setup(request, httpMimeTypeHTML);
     poststr(request,NULL);
+    return 0;
 }
 #endif
 
@@ -450,13 +533,6 @@ static int http_rest_get_seriallog(http_request_t *request){
 
 static int http_rest_get_pins(http_request_t *request){
     int i;
-    /*typedef struct pinsState_s {
-    	byte roles[32];
-	    byte channels[32];
-    } pinsState_t;
-
-    extern pinsState_t g_pins;
-    */
     http_setup(request, httpMimeTypeJson);
     poststr(request, "{\"rolenames\":[");
     for (i = 0; i < IOR_Total_Options; i++){
@@ -470,17 +546,17 @@ static int http_rest_get_pins(http_request_t *request){
 
     for (i = 0; i < 32; i++){
         if (i){
-            hprintf128(request, ",%d", g_pins.roles[i]);
+			hprintf128(request, ",%d", g_cfg.pins.roles[i]);
         } else {
-            hprintf128(request, "%d", g_pins.roles[i]);
+            hprintf128(request, "%d", g_cfg.pins.roles[i]);
         }
     }
     poststr(request, "],\"channels\":[");
     for (i = 0; i < 32; i++){
         if (i){
-            hprintf128(request, ",%d", g_pins.channels[i]);
+            hprintf128(request, ",%d", g_cfg.pins.channels[i]);
         } else {
-            hprintf128(request, "%d", g_pins.channels[i]);
+            hprintf128(request, "%d", g_cfg.pins.channels[i]);
         }
     }
     poststr(request, "]}");
@@ -597,8 +673,8 @@ static int http_rest_get_info(http_request_t *request){
     hprintf128(request, "{\"uptime_s\":%d,", Time_getUpTimeSeconds());
     hprintf128(request, "\"build\":\"%s\",", g_build_str);
     hprintf128(request, "\"sys\":\"%s\",", obktype);
-    hprintf128(request, "\"ip\":\"%s\",", getMyIp());
-    hprintf128(request, "\"mac\":\"%s\",", getMACStr(macstr));
+    hprintf128(request, "\"ip\":\"%s\",", HAL_GetMyIPString());
+    hprintf128(request, "\"mac\":\"%s\",", HAL_GetMACStr(macstr));
     hprintf128(request, "\"mqtthost\":\"%s:%d\",", CFG_GetMQTTHost(), CFG_GetMQTTPort());
     hprintf128(request, "\"mqtttopic\":\"%s\",", CFG_GetShortDeviceName());
     hprintf128(request, "\"webapp\":\"%s\"}", CFG_GetWebappRoot());
@@ -685,7 +761,7 @@ static int http_rest_post_pins(http_request_t *request){
         }
     }
     if (iChanged){
-	    PIN_SaveToFlash();
+		CFG_Save_SetupTimer();
         ADDLOG_DEBUG(LOG_FEATURE_API, "Changed %d - saved to flash", iChanged);
     }
 
@@ -709,6 +785,11 @@ static int http_rest_error(http_request_t *request, int code, char *msg){
 
 
 static int http_rest_post_flash(http_request_t *request, int startaddr){
+#if PLATFORM_XR809
+
+#elif PLATFORM_BL602
+
+#else
     int total = 0;
     int towrite;
     char *writebuf;
@@ -749,6 +830,7 @@ static int http_rest_post_flash(http_request_t *request, int startaddr){
     close_ota();
 
     poststr(request,NULL);
+#endif
     return 0;
 }
 
@@ -800,7 +882,15 @@ static int http_rest_get_flash(http_request_t *request, int startaddr, int len){
         if (readlen > 1024){
             readlen = 1024;
         }
+#if PLATFORM_XR809
+  //uint32_t flash_read(uint32_t flash, uint32_t addr,void *buf, uint32_t size)
+ #define FLASH_INDEX_XR809 0
+        res = flash_read(FLASH_INDEX_XR809, startaddr, buffer, readlen);
+#elif PLATFORM_BL602
+		res = 0;
+#else
         res = flash_read((char *)buffer, readlen, startaddr);
+#endif
         startaddr += readlen;
         len -= readlen;
         postany(request, buffer, readlen);
@@ -812,7 +902,7 @@ static int http_rest_get_flash(http_request_t *request, int startaddr, int len){
 
 static int http_rest_get_dumpconfig(http_request_t *request){
 
-    config_dump_table();
+
 
     http_setup(request, httpMimeTypeText);
     poststr(request, NULL);
@@ -821,6 +911,7 @@ static int http_rest_get_dumpconfig(http_request_t *request){
 
 
 
+#ifdef TESTCONFIG_ENABLE    
 // added for OpenBK7231T
 typedef struct item_new_test_config
 {
@@ -829,113 +920,55 @@ typedef struct item_new_test_config
 }ITEM_NEW_TEST_CONFIG,*ITEM_NEW_TEST_CONFIG_PTR;
 
 ITEM_NEW_TEST_CONFIG testconfig;
+#endif    
 
 static int http_rest_get_testconfig(http_request_t *request){
-#ifdef TESTCONFIG_ENABLE    
-    INFO_ITEM_ST *ret;
-    int intres;
-
-    testconfig.head.type = (UINT32) *((UINT32*)"TEST");
-    testconfig.head.len = sizeof(testconfig) - sizeof(testconfig.head);
-    strcpy(testconfig.somename, "test it here");
-
-    config_dump_table();
-
-    ret = config_search_item((INFO_ITEM_ST *)&testconfig);
-    ADDLOG_DEBUG(LOG_FEATURE_API, "search found %x", ret);
-
-    config_dump_table();
-
-    intres = config_delete_item(testconfig.head.type);
-    ADDLOG_DEBUG(LOG_FEATURE_API, "delete_item returned %d", intres);
-
-    intres = config_save_item((INFO_ITEM_ST *)&testconfig);
-
-    ADDLOG_DEBUG(LOG_FEATURE_API, "save_item returned %d", intres);
-
-    ret = config_search_item((INFO_ITEM_ST *)&testconfig);
-    ADDLOG_DEBUG(LOG_FEATURE_API, "search2 found %x len %d", ret, (ret?ret->len:0));
-
-    intres = config_save_item((INFO_ITEM_ST *)&testconfig);
-    ADDLOG_DEBUG(LOG_FEATURE_API, "save_item returned %d", intres);
-
-    ret = config_search_item((INFO_ITEM_ST *)&testconfig);
-    ADDLOG_DEBUG(LOG_FEATURE_API, "search3 found %x len %d", ret, (ret?ret->len:0));
-
-
-    if (ret){
-        if (os_memcmp(ret, &testconfig, sizeof(testconfig))){
-            ADDLOG_DEBUG(LOG_FEATURE_API, "content mismatch");
-        } else {
-            ADDLOG_DEBUG(LOG_FEATURE_API, "content match");
-        }
-    }
-
-    testconfig.head.len = sizeof(testconfig) - sizeof(testconfig.head) - 1;
-    intres = config_save_item((INFO_ITEM_ST *)&testconfig);
-    ADDLOG_DEBUG(LOG_FEATURE_API, "save_item returned %d", intres);
-
-
-    ret = config_search_item((INFO_ITEM_ST *)&testconfig);
-    ADDLOG_DEBUG(LOG_FEATURE_API, "search4 found %x len %d", ret, (ret?ret->len:0));
-
-    config_dump_table();
-
-    intres = config_delete_item(testconfig.head.type);
-    ADDLOG_DEBUG(LOG_FEATURE_API, "delete_item returned %d", intres);
-
-    config_dump_table();
-
-    config_release_tbl();
-
-    config_dump_table();
-
-    http_setup(request, httpMimeTypeText);
-    poststr(request, NULL);
-#else
     return http_rest_error(request, 400, "unsupported");
-#endif    
     return 0;
 }
 
 static int http_rest_get_flash_vars_test(http_request_t *request){
-#ifndef DISABLE_FLASH_VARS_VARS
-    char *params = request->url + 17;
-    int increment = 0; 
-    int len = 0;
-    int sres;
-    int i;
-    char tmp[128];
-    FLASH_VARS_STRUCTURE data, *p;
-
-    p = &flash_vars;
-
-    sres = sscanf(params, "%x-%x", &increment, &len);
-
-    ADDLOG_DEBUG(LOG_FEATURE_API, "http_rest_get_flash_vars_test %d %d returned %d", increment, len, sres);
-
-    if (increment == 10){
-        flash_vars_read(&data);
-        p = &data;
-    } else {
-        for (i = 0; i < increment; i++){
-            increment_boot_count();
-        }
-        for (i = 0; i < len; i++){
-            boot_complete();
-        }
-    }
-
-    sprintf(tmp, "offset %d, boot count %d, boot success %d, bootfailures %d", 
-        flash_vars_offset, 
-        p->boot_count, 
-        p->boot_success_count,
-        p->boot_count - p->boot_success_count );
-
-    return http_rest_error(request, 200, tmp);
-#else 
-    return http_rest_error(request, 400, "flash vars unsupported");
-#endif
+//#if PLATFORM_XR809
+//    return http_rest_error(request, 400, "flash vars unsupported");
+//#elif PLATFORM_BL602
+//    return http_rest_error(request, 400, "flash vars unsupported");
+//#else
+//#ifndef DISABLE_FLASH_VARS_VARS
+//    char *params = request->url + 17;
+//    int increment = 0; 
+//    int len = 0;
+//    int sres;
+//    int i;
+//    char tmp[128];
+//    FLASH_VARS_STRUCTURE data, *p;
+//
+//    p = &flash_vars;
+//
+//    sres = sscanf(params, "%x-%x", &increment, &len);
+//
+//    ADDLOG_DEBUG(LOG_FEATURE_API, "http_rest_get_flash_vars_test %d %d returned %d", increment, len, sres);
+//
+//    if (increment == 10){
+//        flash_vars_read(&data);
+//        p = &data;
+//    } else {
+//        for (i = 0; i < increment; i++){
+//            HAL_FlashVars_IncreaseBootCount();
+//        }
+//        for (i = 0; i < len; i++){
+//            HAL_FlashVars_SaveBootComplete();
+//        }
+//    }
+//
+//    sprintf(tmp, "offset %d, boot count %d, boot success %d, bootfailures %d", 
+//        flash_vars_offset, 
+//        p->boot_count, 
+//        p->boot_success_count,
+//        p->boot_count - p->boot_success_count );
+//
+//    return http_rest_error(request, 200, tmp);
+//#else 
+    return http_rest_error(request, 400, "flash test unsupported");
 }
 
 
@@ -1020,3 +1053,11 @@ static int http_rest_post_channels(http_request_t *request){
     return http_rest_error(request, 200, "OK");
     return 0;
 }
+
+
+static int http_rest_post_cmd(http_request_t *request){
+    char *cmd = request->bodystart;
+    CMD_ExecuteCommand(cmd);
+    return http_rest_error(request, 200, "OK");
+}
+

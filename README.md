@@ -1,11 +1,28 @@
 # Introduction
 
-This repository is named "OpenBK7231T_App", but now it's a multiplatform app, supporting build for 3 separate chips:
-- BK7231T (WB3S, WB2S, etc)
-- BK7231N (CB2S, etc)
+OpenBK7231T/OpenBeken is a Tasmota replacement for new Tuya modules featuring MQTT and Home Assistant compatibility.
+This repository is named "OpenBK7231T_App", but now it's a multiplatform app, supporting build for 4 separate chips:
+- BK7231T (WB3S, WB2S, WB2L, etc)
+- BK7231N (CB2S, CB2L, etc)
 - XR809 (XR3, etc)
+- BL602
 
-To build for a given platform, just checkout first our version of SDK and then checkout this app repository into it, details later.
+Please use automatically compiled binaries from the Releases tab. To build yourself for a given platform, just checkout first our version of SDK and then checkout this app repository into it, details later.
+
+# Features
+
+OpenBeken features:
+- Tasmota-like setup, configuration and experience on all supported platforms
+- OTA firwmare upgrade system (for Beken chips)
+- MQTT compatibility with Home Assistant
+- Support for multiple relays, buttons, leds, inputs and PWMs
+- Driver system for custom peripherals, including TuyaMCU, I2C bus and Bl0942 power metering chip
+- NTP time from network (can be used with TH06 and other TuyaMCU devices)
+- RGBCW LED lighting control compatible with Home Assistant
+- LittleFS integration for large files (resides in OTA memory, so you have to backup it every time you OTA)
+- Command line system for starting and configuring drivers
+- Short startup command (up to 512 characters) storage in flash config, so you can easily init your drivers (eg. BL0942) without LittleFS
+- and much more
 
 # Building for BK7231T
 
@@ -133,16 +150,38 @@ Currently available pin roles:
 - Button Toggle All_n (as above but pin logical value is inversed)
 - PWM - pulse width modulation output for LED dimmers (with MQTT dimming support from Home Assistant)
 - WiFi LED - special LED to indicate WLan connection state
+- DigitalInput - this is a simple digital input pin, it sets the linked channel to current logical value on it, just like digitalRead( ) from Arduino. This input has a internal pull up resistor.
+- DigitalInput_n (as above but inversed)
+  
+# RGBCW Tuya 5 PWMs LED bulb control compatible with Home Assistant
+  
+  RGBCW light bulbs are now supported and they are compatible with HA by rgb_command_template, brightness_value_template, color_temp_value_template commands. Please follow the guide below showing how to flash, setup and pair them with HA by MQTT:
+  
+  https://www.elektroda.com/rtvforum/topic3880540.html#19938487
+  
+# I2C drivers system with support for MCP23017 bus expander, TC74 temperature sensor and more
+  
+  Detailed description and step by step tutorial on Elektroda.com is coming soon.
+  
+# BL0942 power metering plug (UART communication mode) support and calibration process
+    
+  Detailed description and step by step tutorial on Elektroda.com is coming soon.
   
 # Detailed flashing guides along with device teardowns
   
  I have prepared several detailed teardowns and flashing guides for multiple supported devices.
   
   Outdoor two relays smart switch CCWFIO232PK (BK7231T): 
+  https://www.elektroda.com/rtvforum/topic3875654.html
   https://www.elektroda.pl/rtvforum/viewtopic.php?p=19906670#19906670
   
   Qiachip Smart Switch module (BK7231N/CB2S): 
+  https://www.elektroda.com/rtvforum/topic3874289.html
   https://www.elektroda.pl/rtvforum/viewtopic.php?t=3874289&highlight=
+  
+  Tuya RGBCW 12W light bulb (raw PWMs, no I2C, BK7231N)
+  https://www.elektroda.com/rtvforum/topic3880540.html#19938487
+  https://www.elektroda.pl/rtvforum/viewtopic.php?t=3880540&highlight=
   
 # Futher reading
   

@@ -1,5 +1,4 @@
 #include "new_common.h"
-#include "ctype.h"
 
 // returns amount of space left in buffer (0=overflow happened)
 int strcat_safe(char *tg, const char *src, int tgMaxLen) {
@@ -10,7 +9,7 @@ int strcat_safe(char *tg, const char *src, int tgMaxLen) {
 	while(*tg != 0) {
 		tg++;
 		curOfs++;
-		if(curOfs >= tgMaxLen) {
+		if(curOfs >= tgMaxLen - 1) {
 			*tg = 0;
 			return 0;
 		}
@@ -21,7 +20,7 @@ int strcat_safe(char *tg, const char *src, int tgMaxLen) {
 		src++;
 		tg++;
 		curOfs++;
-		if(curOfs >= tgMaxLen) {
+		if(curOfs >= tgMaxLen - 1) {
 			*tg = 0;
 			return 0;
 		}
@@ -31,6 +30,33 @@ int strcat_safe(char *tg, const char *src, int tgMaxLen) {
 }
 
 
+int strcpy_safe_checkForChanges(char *tg, const char *src, int tgMaxLen) {
+	int changesFound = 0;
+	// keep space for 1 more char
+	int curOfs = 1;
+	// copy
+	while(*src != 0) {
+		if(*tg != *src) {
+			changesFound++;
+			*tg = *src;
+		}
+		src++;
+		tg++;
+		curOfs++;
+		if(curOfs >= tgMaxLen - 1) {
+			if(*tg != 0) {
+				changesFound++;
+				*tg = 0;
+			}
+			return 0;
+		}
+	}
+	if(*tg != 0) {
+		changesFound++;
+		*tg = 0;
+	}
+	return changesFound;
+}
 int strcpy_safe(char *tg, const char *src, int tgMaxLen) {
 	// keep space for 1 more char
 	int curOfs = 1;
@@ -40,7 +66,7 @@ int strcpy_safe(char *tg, const char *src, int tgMaxLen) {
 		src++;
 		tg++;
 		curOfs++;
-		if(curOfs >= tgMaxLen) {
+		if(curOfs >= tgMaxLen - 1) {
 			*tg = 0;
 			return 0;
 		}
@@ -52,12 +78,13 @@ int strcpy_safe(char *tg, const char *src, int tgMaxLen) {
 void urldecode2_safe(char *dst, const char *srcin, int maxDstLen)
 {
 	int curLen = 1;
-        int a, b;
+        int a = 0, b = 0;
 	// avoid signing issues in conversion to int for isxdigit(int c)
 	const unsigned char *src = (const unsigned char *)srcin;
         while (*src) {
-				if(curLen>=maxDstLen)
-					break;
+		if(curLen >= (maxDstLen - 1)){
+			break;
+		}
                 if ((*src == '%') &&
                     ((a = src[1]) && (b = src[2])) &&
                     (isxdigit(a) && isxdigit(b))) {
@@ -81,7 +108,7 @@ void urldecode2_safe(char *dst, const char *srcin, int maxDstLen)
                 } else {
                         *dst++ = *src++;
                 }
-				curLen++;
+		curLen++;
         }
         *dst++ = '\0';
 }

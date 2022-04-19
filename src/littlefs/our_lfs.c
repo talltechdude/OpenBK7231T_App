@@ -18,11 +18,13 @@
 
 
 #ifdef BK_LITTLEFS
+// define the feature ADDLOGF_XXX will use
+#define LOG_FEATURE LOG_FEATURE_LFS
 
 // variables used by the filesystem
 int lfs_initialised = 0;
 lfs_t lfs;
-lfs_file_t file;
+//lfs_file_t file;
 
 // from flash.c
 extern UINT32 flash_read(char *user_buf, UINT32 count, UINT32 address);
@@ -85,25 +87,25 @@ void init_lfs(int create){
         // this should only happen on the first boot
         if (err){
             if (create) {
-                ADDLOG_INFO(LOG_FEATURE_LFS, "Formatting LFS");
+                ADDLOGF_INFO("Formatting LFS");
                 err  = lfs_format(&lfs, &cfg);
                 if (err){
-                    ADDLOG_ERROR(LOG_FEATURE_LFS, "Format LFS failed %d", err);
+                    ADDLOGF_ERROR("Format LFS failed %d", err);
                     return;
                 }
-                ADDLOG_INFO(LOG_FEATURE_LFS, "Formatted LFS");
+                ADDLOGF_INFO("Formatted LFS");
                 err = lfs_mount(&lfs, &cfg);
                 if (err){
-                    ADDLOG_ERROR(LOG_FEATURE_LFS, "Mount LFS failed %d", err);
+                    ADDLOGF_ERROR("Mount LFS failed %d", err);
                     return;
                 }
                 lfs_initialised = 1;
             } else {
-                ADDLOG_INFO(LOG_FEATURE_LFS, "LFS not present - not creating");
+                ADDLOGF_INFO("LFS not present - not creating");
             }
         } else {
             // mounted existing
-            ADDLOG_INFO(LOG_FEATURE_LFS, "Mounted existing LFS");
+            ADDLOGF_INFO("Mounted existing LFS");
             lfs_initialised = 1;
         }
 #ifdef LFS_BOOTCOUNT        
@@ -118,7 +120,7 @@ void init_lfs(int create){
 
         // remember the storage is not updated until the file is closed successfully
         lfs_file_close(&lfs, &file);
-        ADDLOG_INFO(LOG_FEATURE_LFS, "boot count %d", boot_count);
+        ADDLOGF_INFO("boot count %d", boot_count);
 #endif        
     }
 }
@@ -137,7 +139,10 @@ static int lfs_read(const struct lfs_config *c, lfs_block_t block,
     unsigned int startAddr = LFS_BLOCKS_START;
     startAddr += block*LFS_BLOCK_SIZE;
     startAddr += off;
+    GLOBAL_INT_DECLARATION();
+    GLOBAL_INT_DISABLE();
     res = flash_read((char *)buffer, size, startAddr);
+    GLOBAL_INT_RESTORE();
     return res;
 }
 
@@ -147,12 +152,21 @@ static int lfs_read(const struct lfs_config *c, lfs_block_t block,
 static int lfs_write(const struct lfs_config *c, lfs_block_t block,
         lfs_off_t off, const void *buffer, lfs_size_t size){
     int res;
+    int protect = FLASH_PROTECT_NONE;
     unsigned int startAddr = LFS_BLOCKS_START;
+    GLOBAL_INT_DECLARATION();
+
     startAddr += block*LFS_BLOCK_SIZE;
     startAddr += off;
     
+    GLOBAL_INT_DISABLE();
+    flash_ctrl(CMD_FLASH_SET_PROTECT, &protect);
     flash_ctrl(CMD_FLASH_WRITE_ENABLE, (void *)0);
     res = flash_write((char *)buffer , size, startAddr);
+    protect = FLASH_PROTECT_ALL;
+    flash_ctrl(CMD_FLASH_SET_PROTECT, &protect);
+    GLOBAL_INT_RESTORE();
+    
     return res;
 }
 
@@ -162,10 +176,18 @@ static int lfs_write(const struct lfs_config *c, lfs_block_t block,
 // May return LFS_ERR_CORRUPT if the block should be considered bad.
 static int lfs_erase(const struct lfs_config *c, lfs_block_t block){
     int res;
+    int protect = FLASH_PROTECT_NONE;
     unsigned int startAddr = LFS_BLOCKS_START;
+    GLOBAL_INT_DECLARATION();
+
     startAddr += block*LFS_BLOCK_SIZE;
+    GLOBAL_INT_DISABLE();
+    flash_ctrl(CMD_FLASH_SET_PROTECT, &protect);
     flash_ctrl(CMD_FLASH_WRITE_ENABLE, (void *)0);
     res = flash_ctrl(CMD_FLASH_ERASE_SECTOR, &startAddr);
+    protect = FLASH_PROTECT_ALL;
+    flash_ctrl(CMD_FLASH_SET_PROTECT, &protect);
+    GLOBAL_INT_RESTORE();
     return res;
 }
 

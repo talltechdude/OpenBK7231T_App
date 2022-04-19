@@ -164,10 +164,54 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\src\flash_config\flash_config.c"
+				RelativePath=".\src\i2c\drv_i2c_main.c"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\src\i2c\drv_i2c_mcp23017.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\src\i2c\drv_i2c_tc74.c"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\src\httpserver\http_fns.c"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
 					ExcludedFromBuild="true"
 					>
 					<Tool
@@ -188,24 +232,12 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\src\httpserver\http_tcp_server.h"
-				>
-			</File>
-			<File
 				RelativePath=".\src\jsmn\jsmn.c"
 				>
 			</File>
 			<File
 				RelativePath=".\src\logging\logging.c"
 				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\src\new_builtin_devices.c"
@@ -216,28 +248,20 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\new_cfg.h"
-				>
-			</File>
-			<File
 				RelativePath=".\src\new_common.c"
-				>
-			</File>
-			<File
-				RelativePath=".\src\new_common.h"
 				>
 			</File>
 			<File
 				RelativePath=".\src\httpserver\new_http.c"
 				>
-			</File>
-			<File
-				RelativePath=".\src\new_http.h"
-				>
-			</File>
-			<File
-				RelativePath=".\src\httpserver\new_http.h"
-				>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\src\mqtt\new_mqtt.c"
@@ -250,13 +274,41 @@
 						Name="VCCLCompilerTool"
 					/>
 				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\src\new_pins.c"
 				>
 			</File>
 			<File
-				RelativePath=".\src\new_pins.h"
+				RelativePath=".\src\ota\ota.c"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\src\littlefs\our_lfs.c"
 				>
 			</File>
 			<File
@@ -270,12 +322,8 @@
 						Name="VCCLCompilerTool"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\src\tuya_device.c"
-				>
 				<FileConfiguration
-					Name="Debug|Win32"
+					Name="Release|Win32"
 					ExcludedFromBuild="true"
 					>
 					<Tool
@@ -288,6 +336,14 @@
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
 					ExcludedFromBuild="true"
 					>
 					<Tool
@@ -314,10 +370,50 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\platforms\bk7231t\bk7231t_os\beken378\func\user_driver\BkDriverI2c.h"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\platforms\bk7231t\bk7231t_os\beken378\driver\common\dd.c"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath="..\..\platforms\bk7231t\bk7231t_os\beken378\func\lwip_intf\lwip-2.0.2\port\ethernetif.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
 					ExcludedFromBuild="true"
 					>
 					<Tool
@@ -336,12 +432,28 @@
 						Name="VCCLCompilerTool"
 					/>
 				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\platforms\bk7231t\bk7231t_os\beken378\func\lwip_intf\lwip-2.0.2\src\include\lwip\apps\mqtt.h"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
 					ExcludedFromBuild="true"
 					>
 					<Tool
@@ -360,12 +472,28 @@
 						Name="VCCLCompilerTool"
 					/>
 				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\platforms\bk7231t\bk7231t_os\beken378\func\key\multi_button.h"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
 					ExcludedFromBuild="true"
 					>
 					<Tool
@@ -384,6 +512,14 @@
 						Name="VCCLCompilerTool"
 					/>
 				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\platforms\bk7231t\bk7231t_os\beken378\func\include\net_param_pub.h"
@@ -396,7 +532,362 @@
 						Name="VCCustomBuildTool"
 					/>
 				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
 			</File>
+		</Filter>
+		<Filter
+			Name="Header Files"
+			>
+			<File
+				RelativePath=".\src\drv_bl0942.h"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\src\i2c\drv_i2c_local.h"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\src\drv_i2c_public.h"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\src\drv_public.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\drv_tuyaMCU.h"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\src\drv_uart.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\httpserver\http_fns.h"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\src\httpserver\http_tcp_server.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\new_cfg.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\new_cmd.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\new_common.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\httpserver\new_http.h"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\src\new_http.h"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\src\new_main.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\new_pins.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\new_repeatingEvents.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\new_tokenizer.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ntp_time.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\obk_config.h"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="CMD"
+			>
+			<File
+				RelativePath=".\src\cmnds\cmd_local.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\cmnds\cmd_main.c"
+				>
+			</File>
+			<File
+				RelativePath=".\src\cmnds\cmd_newLEDDriver.c"
+				>
+			</File>
+			<File
+				RelativePath=".\src\cmnds\cmd_public.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\cmnds\cmd_repeatingEvents.c"
+				>
+			</File>
+			<File
+				RelativePath=".\src\cmnds\cmd_tasmota.c"
+				>
+			</File>
+			<File
+				RelativePath=".\src\cmnds\cmd_test.c"
+				>
+			</File>
+			<File
+				RelativePath=".\src\cmnds\cmd_tokenizer.c"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="Driver"
+			>
+			<File
+				RelativePath=".\src\driver\drv_bl0942.c"
+				>
+			</File>
+			<File
+				RelativePath=".\src\driver\drv_bl0942.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\driver\drv_config.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\driver\drv_i2c_public.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\driver\drv_main.c"
+				>
+			</File>
+			<File
+				RelativePath=".\src\driver\drv_ntp.c"
+				>
+			</File>
+			<File
+				RelativePath=".\src\driver\drv_public.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\driver\drv_tuyaMCU.c"
+				>
+			</File>
+			<File
+				RelativePath=".\src\driver\drv_tuyaMCU.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\driver\drv_uart.c"
+				>
+			</File>
+			<File
+				RelativePath=".\src\driver\drv_uart.h"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="I2C"
+			>
+			<File
+				RelativePath=".\src\i2c\drv_i2c_mcp23017.h"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="HAL"
+			>
+			<File
+				RelativePath=".\src\hal\hal_generic.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\hal\hal_pins.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\hal\hal_wifi.h"
+				>
+			</File>
+			<Filter
+				Name="BL602"
+				>
+				<File
+					RelativePath=".\src\hal\bl602\hal_flashConfig_bl602.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\hal\bl602\hal_flashVars_bl602.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\hal\bl602\hal_generic_bl602.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\hal\bl602\hal_main_bl602.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\hal\bl602\hal_pins_bl602.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\hal\bl602\hal_wifi_bl602.c"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="BK7231"
+				>
+				<File
+					RelativePath=".\src\hal\bk7231\hal_flashConfig_bk7231.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\hal\bk7231\hal_flashVars_bk7231.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\hal\bk7231\hal_generic_bk7231.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\hal\bk7231\hal_main_bk7231.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\hal\bk7231\hal_pins_bk7231.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\hal\bk7231\hal_wifi_bk7231.c"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="XR809"
+				>
+				<File
+					RelativePath=".\src\hal\xr809\hal_flashConfig_xr809.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\hal\xr809\hal_flashVars_xr809.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\hal\xr809\hal_generic_xr809.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\hal\xr809\hal_main_xr809.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\hal\xr809\hal_pins_xr809.c"
+					>
+				</File>
+				<File
+					RelativePath=".\src\hal\xr809\hal_wifi_xr809.c"
+					>
+				</File>
+			</Filter>
+		</Filter>
+		<Filter
+			Name="BL602_Only"
+			>
+			<File
+				RelativePath="..\main.c"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="XR809_Only"
+			>
 		</Filter>
 	</Files>
 	<Globals>

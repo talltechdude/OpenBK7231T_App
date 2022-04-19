@@ -1,21 +1,12 @@
 
 #include "new_mqtt.h"
+#include "../new_common.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
 #include "../logging/logging.h"
-#include <ctype.h>
+// Commands register, execution API and cmd tokenizer
+#include "../cmnds/cmd_public.h"
 
-
-#undef os_printf
-#undef PR_DEBUG
-#undef PR_NOTICE
-#undef Malloc
-#undef Free
-#define os_printf addLog
-#define PR_DEBUG addLog
-#define PR_NOTICE addLog
-#define Malloc os_malloc
-#define Free os_free
 
 
 #ifndef LWIP_MQTT_EXAMPLE_IPADDR_INIT
@@ -55,6 +46,8 @@ extern void mqtt_disconnect(mqtt_client_t *client);
 static int g_my_reconnect_mqtt_after_time = -1;
 ip_addr_t mqtt_ip LWIP_MQTT_EXAMPLE_IPADDR_INIT;
 mqtt_client_t* mqtt_client;
+
+static int mqtt_initialised = 0;
 
 typedef struct mqtt_callback_tag {
     char *topic;
@@ -103,6 +96,7 @@ int MQTT_RegisterCallback( const char *basetopic, const char *subscriptiontopic,
 	if (!basetopic || !subscriptiontopic || !callback){
 		return -1;
 	}
+  addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"MQTT_RegisterCallback called for bT %s subT %s", basetopic, subscriptiontopic);
 
   // find existing to replace
   for (index = 0; index < numCallbacks; index++){
@@ -127,6 +121,9 @@ int MQTT_RegisterCallback( const char *basetopic, const char *subscriptiontopic,
 	}
   if (!callbacks[index]){
 	  callbacks[index] = (mqtt_callback_t*)os_malloc(sizeof(mqtt_callback_t));
+	  if(callbacks[index]!=0) {
+		memset(callbacks[index],0,sizeof(mqtt_callback_t));
+	  }
   }
 	if (!callbacks[index]){
 		return -2;
@@ -216,7 +213,7 @@ int channelSet(mqtt_request_t* request){
   int channel = 0;
   int iValue = 0;
 
-  PR_NOTICE("channelSet topic %i", request->topic);
+  addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"channelSet topic %i", request->topic);
 
   // TODO: better 
   while(*p != '/') {
@@ -225,7 +222,7 @@ int channelSet(mqtt_request_t* request){
     p++;
   }
   p++;
-  PR_NOTICE("channelSet part topic %s", p);
+  addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"channelSet part topic %s", p);
 
   if ((*p - '0' >= 0) && (*p - '0' <= 9)){
     channel = atoi(p);
@@ -233,7 +230,7 @@ int channelSet(mqtt_request_t* request){
     channel = -1;
   }
 
-  PR_NOTICE("channelSet channel %i", channel);
+  addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"channelSet channel %i", channel);
 
   // if channel out of range, stop here.
   if ((channel < 0) || (channel > 32)){
@@ -250,7 +247,7 @@ int channelSet(mqtt_request_t* request){
 
   // if not /set, then stop here
   if (strcmp(p, "set")){
-    PR_NOTICE("channelSet NOT 'set'");
+    addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"channelSet NOT 'set'");
     return 0;
   }
 
@@ -262,8 +259,7 @@ int channelSet(mqtt_request_t* request){
   // strncpy does not terminate??!!!!
   copy[len] = '\0';
 
-  //PR_NOTICE("MQTT client in mqtt_incoming_data_cb\n");
-  PR_NOTICE("MQTT client in mqtt_incoming_data_cb data is %s for ch %i\n", copy, channel);
+  addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"MQTT client in mqtt_incoming_data_cb data is %s for ch %i\n", copy, channel);
 
   iValue = atoi((char *)copy);
   CHANNEL_Set(channel,iValue,0);
@@ -279,9 +275,7 @@ int tasCmnd(mqtt_request_t* request){
   // we only need a few bytes to receive a decimal number 0-100
   char copy[64];
   int len = request->receivedLen;
-  char *p = request->topic;
-  int channel = 0;
-  int iValue = 0;
+  const char *p = request->topic;
 
   // assume a string input here, copy and terminate
   if(len > sizeof(copy)-1) {
@@ -291,8 +285,6 @@ int tasCmnd(mqtt_request_t* request){
   // strncpy does not terminate??!!!!
   copy[len] = '\0';
 
-  PR_NOTICE("tas? data is %s for ch %s\n", copy, request->topic);
-
   // TODO: better 
   // skip to after second forward slash
   while(*p != '/') { if(*p == 0) return 0; p++; }
@@ -300,61 +292,8 @@ int tasCmnd(mqtt_request_t* request){
   while(*p != '/') { if(*p == 0) return 0; p++; }
   p++;
 
-  do{
-    // accept POWER and POWER0-n
-    if (!wal_strnicmp(p, "POWER", 5)){
-      p += 5;
-      if ((*p - '0' >= 0) && (*p - '0' <= 9)){
-        channel = atoi(p);
-      } else {
-        channel = 0;
-      }
-      // if channel out of range, stop here.
-      if ((channel < 0) || (channel > 32))  return 0;
-
-      //PR_NOTICE("MQTT client in mqtt_incoming_data_cb\n");
-      PR_NOTICE("MQTT client in tasCmnd data is %s for ch %i\n", copy, channel);
-      iValue = atoi((char *)copy);
-      CHANNEL_Set(channel,iValue,0);
-      break;
-    }
-
-    if (!wal_strnicmp(p, "COLOR", 5)){
-      p += 5;
-      if (copy[0] != '#'){
-        PR_NOTICE("tasCmnd COLOR expected a # prefixed color");
-      } else {
-        char *c = copy;
-        int val = 0;
-        int channel = 0;
-        c++;
-        while (*c){
-          char tmp[3];
-          int r;
-          tmp[0] = *(c++);
-          if (!*c) break;
-          tmp[1] = *(c++);
-          r = sscanf(tmp, "%x", &val);
-          if (!r) break;
-          // if this channel is not PWM, find a PWM channel;
-          while ((channel < 32) && (IOR_PWM != CHANNEL_GetRoleForChannel(channel))) {
-            channel ++;
-          }
-
-          if (channel >= 32) break;
-
-          val = (val * 100)/255;
-          CHANNEL_Set(channel, val, 0);
-          // move to next channel.
-          channel ++;
-        }
-      }
-      break;
-    }
-
-    PR_NOTICE("MQTT client unprocessed in tasCmnd data is %s for topic \n", copy, request->topic);
-    break;
-  } while (0);
+  // use command executor....
+  CMD_ExecuteCommandArgs(p, copy);
 
   // return 1 to stop processing callbacks here.
   // return 0 to allow later callbacks to process this topic.
@@ -374,14 +313,16 @@ static void MQTT_disconnect(mqtt_client_t *client)
 static void mqtt_pub_request_cb(void *arg, err_t result)
 {
   if(result != ERR_OK) {
-    PR_NOTICE("Publish result: %d\n", result);
+  addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"Publish result: %d\n", result);
   }
 }
 
-void example_publish(mqtt_client_t *client, int channel, int iVal)
+// This is used to publish channel values in "obk0696FB33/1/get" format with numerical value,
+// This is also used to publish custom information with string name,
+// for example, "obk0696FB33/voltage/get" is used to publish voltage from the sensor
+void MQTT_PublishMain(mqtt_client_t *client, const char *sChannel, const char *sVal)
 {
 	char pub_topic[32];
-	char pub_payload[128];
 //  const char *pub_payload= "{\"temperature\": \"45.5\"}";
   err_t err;
   //int myValue;
@@ -396,18 +337,14 @@ void example_publish(mqtt_client_t *client, int channel, int iVal)
 		return;
   }
 
-  //myValue = CHANNEL_Check(channel);
-   sprintf(pub_payload,"%i",iVal);
-   
-    PR_NOTICE("calling pub: \n");
+  addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"Publishing %s = %s \n",sChannel,sVal);
 
 	baseName = CFG_GetShortDeviceName();
 
-	//sprintf(pub_topic,"wb2s/%i/get",channel);
-	sprintf(pub_topic,"%s/%i/get",baseName,channel);
-  err = mqtt_publish(client, pub_topic, pub_payload, strlen(pub_payload), qos, retain, mqtt_pub_request_cb, 0);
+	sprintf(pub_topic,"%s/%s/get",baseName,sChannel);
+  err = mqtt_publish(client, pub_topic, sVal, strlen(sVal), qos, retain, mqtt_pub_request_cb, 0);
   if(err != ERR_OK) {
-    PR_NOTICE("Publish err: %d\n", err);
+      addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"Publish err: %d\n", err);
 	 if(err == ERR_CONN) {
 		 
 		// g_my_reconnect_mqtt_after_time = 5;
@@ -430,7 +367,7 @@ static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t f
     g_mqtt_request.received = data;
     g_mqtt_request.receivedLen = len;
 
-    PR_NOTICE("MQTT in topic %s", g_mqtt_request.topic);    
+  addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"MQTT in topic %s", g_mqtt_request.topic);    
 
     for (i = 0; i < numCallbacks; i++){
       char *cbtopic = callbacks[i]->topic;
@@ -463,8 +400,7 @@ static void mqtt_incoming_publish_cb(void *arg, const char *topic, u32_t tot_len
 		}
 	}
 
-  //PR_NOTICE("MQTT client in mqtt_incoming_publish_cb\n");
-  PR_NOTICE("MQTT client in mqtt_incoming_publish_cb topic %s\n",topic);
+  addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"MQTT client in mqtt_incoming_publish_cb topic %s\n",topic);
 }
 
 static void
@@ -472,14 +408,14 @@ mqtt_request_cb(void *arg, err_t err)
 {
   const struct mqtt_connect_client_info_t* client_info = (const struct mqtt_connect_client_info_t*)arg;
 
-  PR_NOTICE("MQTT client \"%s\" request cb: err %d\n", client_info->client_id, (int)err);
+  addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"MQTT client \"%s\" request cb: err %d\n", client_info->client_id, (int)err);
 }
 static void mqtt_sub_request_cb(void *arg, err_t result)
 {
   /* Just print the result code here for simplicity,
      normal behaviour would be to take some action if subscribe fails like
      notifying user, retry subscribe or disconnect from server */
-  PR_NOTICE("Subscribe result: %i\n", result);
+    addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"Subscribe result: %i\n", result);
 }
 
 static void mqtt_connection_cb(mqtt_client_t *client, void *arg, mqtt_connection_status_t status)
@@ -491,11 +427,11 @@ static void mqtt_connection_cb(mqtt_client_t *client, void *arg, mqtt_connection
   const struct mqtt_connect_client_info_t* client_info = (const struct mqtt_connect_client_info_t*)arg;
   LWIP_UNUSED_ARG(client);
 
-//  PR_NOTICE(("MQTT client < removed name > connection cb: status %d\n",  (int)status));
- // PR_NOTICE(("MQTT client \"%s\" connection cb: status %d\n", client_info->client_id, (int)status));
+//   addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"MQTT client < removed name > connection cb: status %d\n",  (int)status);
+ //  addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"MQTT client \"%s\" connection cb: status %d\n", client_info->client_id, (int)status);
 
   if (status == MQTT_CONNECT_ACCEPTED) {
-    PR_NOTICE("mqtt_connection_cb: Successfully connected\n");
+    addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"mqtt_connection_cb: Successfully connected\n");
 
     mqtt_set_inpub_callback(mqtt_client,
           mqtt_incoming_publish_cb,
@@ -513,9 +449,9 @@ static void mqtt_connection_cb(mqtt_client_t *client, void *arg, mqtt_connection
             mqtt_request_cb, LWIP_CONST_CAST(void*, client_info),
             1);
           if(err != ERR_OK) {
-            PR_NOTICE("mqtt_subscribe to %s return: %d\n", callbacks[i]->subscriptionTopic, err);
+            addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"mqtt_subscribe to %s return: %d\n", callbacks[i]->subscriptionTopic, err);
           } else {
-            PR_NOTICE("mqtt_subscribed to %s\n", callbacks[i]->subscriptionTopic);
+            addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"mqtt_subscribed to %s\n", callbacks[i]->subscriptionTopic);
           }
         }
       }
@@ -526,7 +462,7 @@ static void mqtt_connection_cb(mqtt_client_t *client, void *arg, mqtt_connection
     sprintf(tmp,"%s/connected",baseName);
     err = mqtt_publish(client, tmp, "online", strlen("online"), 2, true, mqtt_pub_request_cb, 0);
     if(err != ERR_OK) {
-      PR_NOTICE("Publish err: %d\n", err);
+      addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"Publish err: %d\n", err);
       if(err == ERR_CONN) {
       // g_my_reconnect_mqtt_after_time = 5;
       }
@@ -541,7 +477,7 @@ static void mqtt_connection_cb(mqtt_client_t *client, void *arg, mqtt_connection
     //        mqtt_request_cb, LWIP_CONST_CAST(void*, client_info),
     //        1);
   } else {
-    PR_NOTICE("mqtt_connection_cb: Disconnected, reason: %d\n", status);
+    addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"mqtt_connection_cb: Disconnected, reason: %d\n", status);
   }
 }
 
@@ -559,7 +495,7 @@ static void MQTT_do_connect(mqtt_client_t *client)
   mqtt_host = CFG_GetMQTTHost();
 	mqtt_port = CFG_GetMQTTPort();
 
-  PR_NOTICE("mqtt_userName %s\r\nmqtt_pass %s\r\nmqtt_clientID %s\r\nmqtt_host %s:%d\r\n",
+  addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"mqtt_userName %s\r\nmqtt_pass %s\r\nmqtt_clientID %s\r\nmqtt_host %s:%d\r\n",
     mqtt_userName,
     mqtt_pass,
     mqtt_clientID,
@@ -569,7 +505,7 @@ static void MQTT_do_connect(mqtt_client_t *client)
 
 
   if (!mqtt_host[0]){
-    PR_NOTICE("mqtt_host empty, not starting mqtt\r\n");
+    addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"mqtt_host empty, not starting mqtt\r\n");
     return;
   }
 
@@ -589,12 +525,12 @@ static void MQTT_do_connect(mqtt_client_t *client)
     if (hostEntry->h_addr_list && hostEntry->h_addr_list[0]){
       int len = hostEntry->h_length;
       if (len > 4){
-        PR_NOTICE("mqtt_host resolves to addr len > 4\r\n");
+        addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"mqtt_host resolves to addr len > 4\r\n");
         len = 4;
       }
       memcpy(&mqtt_ip, hostEntry->h_addr_list[0], len);
     } else {
-      PR_NOTICE("mqtt_host resolves no addresses?\r\n");
+      addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"mqtt_host resolves no addresses?\r\n");
       return;
     }
 
@@ -612,14 +548,27 @@ static void MQTT_do_connect(mqtt_client_t *client)
             &mqtt_client_info);
 
   } else {
-    PR_NOTICE("mqtt_host %s not found by gethostbyname\r\n", mqtt_host);
+   addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"mqtt_host %s not found by gethostbyname\r\n", mqtt_host);
   }
 }
+void MQTT_PublishMain_StringFloat(const char *sChannel, float f)
+{
+	char valueStr[16];
+	sprintf(valueStr,"%f",f);
 
+	MQTT_PublishMain(mqtt_client,sChannel,valueStr);
+}
 static void app_my_channel_toggle_callback(int channel, int iVal)
 {
-  ADDLOG_INFO(LOG_FEATURE_MAIN, "Channel has changed! Publishing change %i with %i \n",channel,iVal);
-	example_publish(mqtt_client,channel,iVal);
+	char channelNameStr[8];
+	char valueStr[16];
+
+   addLogAdv(LOG_INFO,LOG_FEATURE_MAIN, "Channel has changed! Publishing change %i with %i \n",channel,iVal);
+
+	sprintf(channelNameStr,"%i",channel);
+	sprintf(valueStr,"%i",iVal);
+
+	MQTT_PublishMain(mqtt_client,channelNameStr,valueStr);
 }
 
 // initialise things MQTT
@@ -642,37 +591,44 @@ void MQTT_init(){
   // note: this may REPLACE an existing entry with the same ID.  ID 2 !!!
   MQTT_RegisterCallback( cbtopicbase, cbtopicsub, 2, tasCmnd);
 
+  mqtt_initialised = 1;
+
 }
 
 
 // called from user timer.
-void MQTT_RunEverySecondUpdate() {
+int MQTT_RunEverySecondUpdate() {
 
-  // if asked to reconnect (e.g. change of topic(s))
-  if (mqtt_reconnect > 0){
-    mqtt_reconnect --;
-    if (mqtt_reconnect == 0){
-      // then if connected, disconnect, and then it will reconnect automatically in 2s
-      if (mqtt_client && mqtt_client_is_connected(mqtt_client)) {
-        MQTT_disconnect(mqtt_client);
-        loopsWithDisconnected = 8;
-      }
-    }
-  }
+	if (!mqtt_initialised)
+		return 0;
+
+	// if asked to reconnect (e.g. change of topic(s))
+	if (mqtt_reconnect > 0){
+		mqtt_reconnect --;
+		if (mqtt_reconnect == 0){
+			// then if connected, disconnect, and then it will reconnect automatically in 2s
+			if (mqtt_client && mqtt_client_is_connected(mqtt_client)) {
+				MQTT_disconnect(mqtt_client);
+				loopsWithDisconnected = 8;
+			}
+		}
+	}
 
 	if(mqtt_client == 0 || mqtt_client_is_connected(mqtt_client) == 0) {
-		ADDLOG_INFO(LOG_FEATURE_MAIN, "Timer discovers disconnected mqtt %i\n",loopsWithDisconnected);
+		//addLogAdv(LOG_INFO,LOG_FEATURE_MAIN, "Timer discovers disconnected mqtt %i\n",loopsWithDisconnected);
 		loopsWithDisconnected++;
 		if(loopsWithDisconnected > 10)
 		{ 
 			if(mqtt_client == 0)
 			{
-			    mqtt_client = mqtt_client_new();
+				mqtt_client = mqtt_client_new();
 				CHANNEL_SetChangeCallback(app_my_channel_toggle_callback);
-      }
-      MQTT_do_connect(mqtt_client);
+			}
+			MQTT_do_connect(mqtt_client);
 			loopsWithDisconnected = 0;
 		}
+		return 0;
 	}
+	return 1;
 }
 

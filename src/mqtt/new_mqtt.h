@@ -16,7 +16,7 @@ extern mqtt_client_t* mqtt_client;
 //void example_do_connect(mqtt_client_t *client);
 void example_publish(mqtt_client_t *client, int channel, int iVal);
 void MQTT_init();
-void MQTT_RunEverySecondUpdate();
+int MQTT_RunEverySecondUpdate();
 
 
 // ability to register callbacks for MQTT data
@@ -36,4 +36,8 @@ typedef int (*mqtt_callback_fn)(mqtt_request_t *request);
 // ID is unique and non-zero - so that callbacks can be replaced....
 int MQTT_RegisterCallback( const char *basetopic, const char *subscriptiontopic, int ID, mqtt_callback_fn callback);
 int MQTT_RemoveCallback(int ID);
+
+
+void MQTT_PublishMain_StringFloat(const char *sChannel, float f);
+
 

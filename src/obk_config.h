@@ -7,6 +7,12 @@
 #if PLATFORM_XR809
 
 
+#elif WINDOWS
+
+#elif PLATFORM_BL602
+///#define DEBUG_USE_SIMPLE_LOGGER
+#define OBK_DISABLE_ALL_DRIVERS 1
+
 #else
 
 // comment out to remove component

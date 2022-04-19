@@ -1,24 +1,18 @@
 
 
 #include "../new_common.h"
+#include "../logging/logging.h"
 #include "ctype.h" 
-#if WINDOWS
-//#include <windows.h>
-#include <winsock2.h>
-//#include <ws2tcpip.h>
-#elif PLATFORM_XR809
-#include "lwip/sockets.h"
-#include <stdarg.h>
-#else
-#include "lwip/sockets.h"
-#include "str_pub.h"
-#endif
 #include "new_http.h"
 #include "http_fns.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
 #include "../ota/ota.h"
+#include "../hal/hal_wifi.h"
 
+
+// define the feature ADDLOGF_XXX will use
+#define LOG_FEATURE LOG_FEATURE_HTTP
 
 const char httpHeader[] = "HTTP/1.1 %d OK\nContent-type: %s" ;  // HTTP header
 const char httpMimeTypeHTML[] = "text/html" ;              // HTML MIME type
@@ -198,7 +192,7 @@ void http_copyCarg(const char *atin, char *to, int maxSize) {
 	*to = 0;
 }
 
-bool http_getArg(const char *base, const char *name, char *o, int maxSize) {
+int http_getArg(const char *base, const char *name, char *o, int maxSize) {
 	*o = '\0';
 	while(*base != '?') {
 		if(*base == 0)
@@ -237,6 +231,9 @@ const char *htmlPinRoleNames[] = {
 	"Wifi LED_n",
 	"Btn_Tgl_All",
 	"Btn_Tgl_All_n",
+	"DigitalInput",
+	"DigitalInput_n",
+	"ToggleChannelOnToggle",
 	"e",
 	"e",
 };
@@ -276,6 +273,10 @@ const char *g_header = "<h1><a href=\"https://github.com/openshwprojects/OpenBK7
 
 const char *g_header = "<h1><a href=\"https://github.com/openshwprojects/OpenBK7231T/\">OpenBK7231T</a></h1><h3><a href=\"https://www.elektroda.com/rtvforum/viewtopic.php?p=19841301#19841301\">[Read more]</a><a href=\"https://paypal.me/openshwprojects\">[Support project]</a></h3>";
 
+#elif PLATFORM_BL602
+
+const char *g_header = "<h1><a href=\"https://github.com/openshwprojects/OpenBK7231T/\">OpenBL602</a></h1><h3><a href=\"https://www.elektroda.com/rtvforum/viewtopic.php?p=19841301#19841301\">[Read more]</a><a href=\"https://paypal.me/openshwprojects\">[Support project]</a></h3>";
+
 #elif WINDOWS
 
 const char *g_header = "<h1><a href=\"https://github.com/openshwprojects/OpenBK7231T/\">OpenBK7231 [Win test]</a></h1><h3><a href=\"https://www.elektroda.com/rtvforum/viewtopic.php?p=19841301#19841301\">[Read more]</a><a href=\"https://paypal.me/openshwprojects\">[Support project]</a></h3>";
@@ -303,7 +304,6 @@ void HTTP_AddBuildFooter(http_request_t *request) {
 	poststr(request,upTimeStr);
 }
 
-
 // add some more output safely, sending if necessary.
 // call with str == NULL to force send. - can be binary.
 // supply length
@@ -325,7 +325,7 @@ int postany(http_request_t *request, const char *str, int len){
 		currentlen = 0;
 	}
 	if (addlen > request->replymaxlen){
-		printf("won't fit");
+		ADDLOGF_ERROR("won't fit");
 	} else {
 		memcpy( request->reply+request->replylen, str, addlen );
 		request->replylen += addlen;
@@ -403,14 +403,14 @@ int HTTP_ProcessPacket(http_request_t *request) {
 		}
 	}
 	if (request->method == -1){
-		printf("unsupported method %7s", recvbuf);
+		ADDLOGF_ERROR("unsupported method %7s", recvbuf);
 		return 0;
 	}
 
 	if (request->method == HTTP_GET) {
-		printf("HTTP request\n");
+		//ADDLOG_INFO(LOG_FEATURE_HTTP, "HTTP request\n");
 	} else {
-		printf("Other request\n");
+		//ADDLOG_INFO(LOG_FEATURE_HTTP, "Other request\n");
 	}
 
 	// if OPTIONS, return now - for CORS
@@ -427,7 +427,7 @@ int HTTP_ProcessPacket(http_request_t *request) {
 		p++; // past space
 	}
 	else {
-		printf("invalid request\n");
+		ADDLOGF_ERROR("invalid request\n");
 		return 0;
 	}
 
@@ -441,7 +441,7 @@ int HTTP_ProcessPacket(http_request_t *request) {
 		p++; // past \r
 		p++; // past \n
 	} else {
-		printf("invalid request\n");
+		ADDLOGF_ERROR("invalid request\n");
 		return 0;
 	}
 	// i.e. not received
@@ -510,7 +510,10 @@ int HTTP_ProcessPacket(http_request_t *request) {
 	if(http_checkUrlBase(urlStr,"cfg_mac")) return http_fn_cfg_mac(request);
 
 	if(http_checkUrlBase(urlStr,"flash_read_tool")) return http_fn_flash_read_tool(request);
+	if(http_checkUrlBase(urlStr,"uart_tool")) return http_fn_uart_tool(request);
+	if(http_checkUrlBase(urlStr,"cmd_tool")) return http_fn_cmd_tool(request);
 	if(http_checkUrlBase(urlStr,"config_dump_table")) return http_fn_config_dump_table(request);
+	if(http_checkUrlBase(urlStr,"startup_command")) return http_fn_startup_command(request);
 
 	if(http_checkUrlBase(urlStr,"cfg_quick")) return http_fn_cfg_quick(request);
 	if(http_checkUrlBase(urlStr,"cfg_ha")) return http_fn_cfg_ha(request);
@@ -520,6 +523,7 @@ int HTTP_ProcessPacket(http_request_t *request) {
 
 	if(http_checkUrlBase(urlStr,"ota")) return http_fn_ota(request);
 	if(http_checkUrlBase(urlStr,"ota_exec")) return http_fn_ota_exec(request);
+	if(http_checkUrlBase(urlStr,"cm")) return http_fn_cm(request);
 
 	return http_fn_other(request);
 }

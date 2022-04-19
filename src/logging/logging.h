@@ -10,13 +10,26 @@
 // or to use from boot, #define DEFAULT_DIRECT_SERIAL_LOG 1
 ///////////////////////////////////////////////////////////////////////////
 
-void addLog(char *fmt, ...);
+
+#ifndef _OBK_LOGGING_H
+#define _OBK_LOGGING_H
+
 void addLogAdv(int level, int feature, char *fmt, ...);
 
-#define ADDLOG_ERROR(x, y, ...) addLogAdv(LOG_ERROR, x, y, ##__VA_ARGS__)
-#define ADDLOG_WARN(x, y, ...)  addLogAdv(LOG_WARN, x, y, ##__VA_ARGS__)
-#define ADDLOG_INFO(x, y, ...)  addLogAdv(LOG_INFO, x, y, ##__VA_ARGS__)
-#define ADDLOG_DEBUG(x, y, ...) addLogAdv(LOG_DEBUG, x, y, ##__VA_ARGS__)
+int log_command(const void *context, const char *cmd, const char *args);
+
+#define ADDLOG_ERROR(x, fmt, ...) addLogAdv(LOG_ERROR, x, fmt, ##__VA_ARGS__)
+#define ADDLOG_WARN(x, fmt, ...)  addLogAdv(LOG_WARN, x, fmt, ##__VA_ARGS__)
+#define ADDLOG_INFO(x, fmt, ...)  addLogAdv(LOG_INFO, x, fmt, ##__VA_ARGS__)
+#define ADDLOG_DEBUG(x, fmt, ...) addLogAdv(LOG_DEBUG, x, fmt, ##__VA_ARGS__)
+#define ADDLOG_EXTRADEBUG(x, fmt, ...) addLogAdv(LOG_EXTRADEBUG, x, fmt, ##__VA_ARGS__)
+
+#define ADDLOGF_ERROR(fmt, ...) addLogAdv(LOG_ERROR, LOG_FEATURE, fmt, ##__VA_ARGS__)
+#define ADDLOGF_WARN(fmt, ...)  addLogAdv(LOG_WARN, LOG_FEATURE, fmt, ##__VA_ARGS__)
+#define ADDLOGF_INFO(fmt, ...)  addLogAdv(LOG_INFO, LOG_FEATURE, fmt, ##__VA_ARGS__)
+#define ADDLOGF_DEBUG(fmt, ...) addLogAdv(LOG_DEBUG, LOG_FEATURE, fmt, ##__VA_ARGS__)
+#define ADDLOGF_EXTRADEBUG(fmt, ...) addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE, fmt, ##__VA_ARGS__)
+
 
 extern int loglevel;
 extern char *loglevelnames[];
@@ -36,8 +49,9 @@ typedef enum {
     LOG_WARN = 2,
     LOG_INFO = 3,
     LOG_DEBUG = 4,
-    LOG_ALL = 5,
-    LOG_MAX = 6
+    LOG_EXTRADEBUG = 5,
+    LOG_ALL = 6,
+    LOG_MAX = 7
 } log_levels;
 
 typedef enum {
@@ -51,7 +65,13 @@ typedef enum {
     LOG_FEATURE_GENERAL         = 7,
     LOG_FEATURE_API             = 8,
     LOG_FEATURE_LFS             = 9,
+    LOG_FEATURE_CMD             = 10,
+    LOG_FEATURE_NTP             = 11,
+	LOG_FEATURE_TUYAMCU			= 12,
+	LOG_FEATURE_I2C				= 13,
+	LOG_FEATURE_BL0942			= 14,
     // add in here - but also in names in logging.c
-    LOG_FEATURE_MAX             = 10,
+    LOG_FEATURE_MAX             = 15,
 } log_features;
 
+#endif
