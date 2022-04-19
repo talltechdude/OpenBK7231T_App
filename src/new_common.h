@@ -207,6 +207,8 @@ int Main_GetLastRebootBootFailures();
 
 
 
+#define PWM_FREQ 1000 // PWM pin freqency in Hz
+#define PWM_MINIMUM 10 // Minimum PWM % to avoid low level flicker
 
 
 
