@@ -826,3 +826,17 @@ void PIN_Init(void)
 	CMD_RegisterCommand("setChannelType", NULL, CMD_SetChannelType, "qqqqqqqq", NULL);
 	CMD_RegisterCommand("showChannelValues", NULL,CMD_ShowChannelValues, "log channel values", NULL);
 }
+void PIN_set_wifi_led(int value){
+	int i;
+	for ( i = 0; i < PLATFORM_GPIO_MAX; i++){
+		if (g_cfg.pins.roles[i] == IOR_LED_WIFI){
+			RAW_SetPinValue(i, value);
+		} else if (g_cfg.pins.roles[i] == IOR_LED_WIFI_n){
+			// inversed
+			RAW_SetPinValue(i, !value);
+		}
+	}
+}
+
+
+
