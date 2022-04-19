@@ -94,6 +94,6 @@ NODE_RED_ENDPOINT ?= http://192.168.x.x:1880/endpoint
 BK7231T_IP ?= 192.168.x.y
 .PHONY: upload
 upload:
-	curl -F "ota=@output/$(APP_VERSION)/$(APP_NAME)_$(APP_VERSION).rbl" -F "ip=$(BK7231T_IP)" -F "endpoint=$(NODE_RED_ENDPOINT)" $(NODE_RED_ENDPOINT)/ota
+	curl -F "ota=@output/$(APP_VERSION)/OpenBK7231T_$(APP_VERSION).rbl" -F "ip=$(BK7231T_IP)" -F "endpoint=$(NODE_RED_ENDPOINT)" $(NODE_RED_ENDPOINT)/ota
 
 endif
