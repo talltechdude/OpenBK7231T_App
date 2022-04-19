@@ -336,9 +336,12 @@ void user_main(void)
   increment_boot_count();
 
 	CFG_InitAndLoad();
-  
+
+#define AUTO_ON
+#ifdef AUTO_ON  
   CHANNEL_Set(1, 100, 0);
   CHANNEL_Set(2, 100, 0);
+#endif
 
 	wifi_ssid = CFG_GetWiFiSSID();
 	wifi_pass = CFG_GetWiFiPass();
