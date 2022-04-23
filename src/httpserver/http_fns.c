@@ -378,7 +378,6 @@ int http_fn_cfg_wifi(http_request_t *request) {
     // for a test, show password as well...
     const char *cur_ssid, *cur_pass;
 	char tmpA[128];
-    int i;
 
     http_setup(request, httpMimeTypeHTML);
     poststr(request,htmlHeader);
@@ -408,6 +407,8 @@ int http_fn_cfg_wifi(http_request_t *request) {
 #elif PLATFORM_BL602
         poststr(request,"TODO BL602<br>");
 #elif PLATFORM_BK7231T
+		int i;
+
         AP_IF_S *ar;
         uint32_t num;
         
@@ -419,7 +420,8 @@ int http_fn_cfg_wifi(http_request_t *request) {
         }
         tuya_hal_wifi_release_ap(ar);
 #elif PLATFORM_BK7231N
-//        poststr(request,"TODO: BK7231N support for scan<br>");
+		int i;
+
         AP_IF_S *ar;
         uint32_t num;
 
@@ -472,7 +474,6 @@ int http_fn_cfg_name(http_request_t *request) {
     // for a test, show password as well...
     const char *shortName, *name;
 	char tmpA[128];
-    int i;
 
     http_setup(request, httpMimeTypeHTML);
     poststr(request,htmlHeader);
@@ -801,7 +802,6 @@ int http_fn_startup_command(http_request_t *request) {
 }
 int http_fn_uart_tool(http_request_t *request) {
 	char tmpA[256];
-	byte results[128];
 	int resultLen = 0;
     http_setup(request, httpMimeTypeHTML);
     poststr(request,htmlHeader);
@@ -812,6 +812,8 @@ int http_fn_uart_tool(http_request_t *request) {
 
     if(http_getArg(request->url,"data",tmpA,sizeof(tmpA))) {
 #ifndef OBK_DISABLE_ALL_DRIVERS
+		byte results[128];
+
         hprintf128(request,"<h3>Sent %s!</h3>",tmpA);
 		if(0){
 			TuyaMCU_Send((byte *)tmpA, strlen(tmpA));
@@ -1001,7 +1003,6 @@ int http_fn_cm(http_request_t *request) {
 }
 
 int http_fn_cfg(http_request_t *request) {
-    int i,j,k;
     http_setup(request, httpMimeTypeHTML);
     poststr(request,htmlHeader);
     poststr(request,g_header);
@@ -1020,12 +1021,15 @@ int http_fn_cfg(http_request_t *request) {
     poststr(request,"<form action=\"startup_command\"><input type=\"submit\" value=\"Change startup command text\"/></form>");
 
 #if PLATFORM_BK7231T | PLATFORM_BK7231N
-    k = config_get_tableOffsets(BK_PARTITION_NET_PARAM,&i,&j);
-    hprintf128(request,"BK_PARTITION_NET_PARAM: bOk %i, at %i, len %i<br>",k,i,j);
-    k = config_get_tableOffsets(BK_PARTITION_RF_FIRMWARE,&i,&j);
-    hprintf128(request,"BK_PARTITION_RF_FIRMWARE: bOk %i, at %i, len %i<br>",k,i,j);
-    k = config_get_tableOffsets(BK_PARTITION_OTA,&i,&j);
-    hprintf128(request,"BK_PARTITION_OTA: bOk %i, at %i, len %i<br>",k,i,j);
+	{
+		int i,j,k;
+		k = config_get_tableOffsets(BK_PARTITION_NET_PARAM,&i,&j);
+		hprintf128(request,"BK_PARTITION_NET_PARAM: bOk %i, at %i, len %i<br>",k,i,j);
+		k = config_get_tableOffsets(BK_PARTITION_RF_FIRMWARE,&i,&j);
+		hprintf128(request,"BK_PARTITION_RF_FIRMWARE: bOk %i, at %i, len %i<br>",k,i,j);
+		k = config_get_tableOffsets(BK_PARTITION_OTA,&i,&j);
+		hprintf128(request,"BK_PARTITION_OTA: bOk %i, at %i, len %i<br>",k,i,j);
+	}
 #endif
 
     poststr(request,"<a href=\"/app\" target=\"_blank\">Launch Web Application</a><br/>");
