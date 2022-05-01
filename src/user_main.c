@@ -257,13 +257,19 @@ void Main_Init()
 		ADDLOGF_INFO("###### safe mode activated - boot failures %d", g_bootFailures);
 	}
 
+	CFG_InitAndLoad();
+
 #define AUTO_ON
-#ifdef AUTO_ON  
-  CHANNEL_Set(1, 100, 0);
-  CHANNEL_Set(2, 100, 0);
+#ifdef AUTO_ON
+	if (CHANNEL_IsInUse(5)) {
+  		CHANNEL_Set(4, 100, 0);
+  		CHANNEL_Set(5, 100, 0);
+	} else {
+  		CHANNEL_Set(1, 100, 0);
+  		CHANNEL_Set(2, 100, 0);
+	}
 #endif
 
-	CFG_InitAndLoad();
 	wifi_ssid = CFG_GetWiFiSSID();
 	wifi_pass = CFG_GetWiFiPass();
 
