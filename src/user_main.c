@@ -259,6 +259,7 @@ void Main_Init()
 
 	CFG_InitAndLoad();
 
+	// Automatically turn on CC and CW to 100% at boot
 #define AUTO_ON
 #ifdef AUTO_ON
 	if (CHANNEL_IsInUse(5)) {
