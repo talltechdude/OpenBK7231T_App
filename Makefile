@@ -51,6 +51,9 @@ sdk/OpenXR809/project/oxr_sharedApp/shared:
 	@echo Create symlink for $(APP_NAME) into sdk folder
 	ln -s "$(shell pwd)/" "sdk/OpenXR809/project/oxr_sharedApp/shared"
 
+sdk/OpenBL602/customer_app/bl602_sharedApp/bl602_sharedApp/shared:
+	@echo Create symlink for $(APP_NAME) into sdk folder
+	ln -s "$(shell pwd)/" "sdk/OpenBL602/customer_app/bl602_sharedApp/bl602_sharedApp/shared"
 
 # Build main binaries
 OpenBK7231T:
@@ -75,6 +78,11 @@ build-BK7231: submodules $(SDK_PATH)/apps/$(APP_NAME)
 	cd $(SDK_PATH)/platforms/$(TARGET_PLATFORM)/toolchain/$(APPS_BUILD_PATH) && sh $(APPS_BUILD_CMD) $(APP_NAME) $(APP_VERSION) $(TARGET_PLATFORM)
 	rm $(SDK_PATH)/platforms/$(TARGET_PLATFORM)/toolchain/$(APPS_BUILD_PATH)/tools/generate/$(APP_NAME)_*.rbl || /bin/true
 	rm $(SDK_PATH)/platforms/$(TARGET_PLATFORM)/toolchain/$(APPS_BUILD_PATH)/tools/generate/$(APP_NAME)_*.bin || /bin/true
+
+OpenBL602: submodules sdk/OpenBL602/customer_app/bl602_sharedApp/bl602_sharedApp/shared
+	$(MAKE) -C sdk/OpenBL602/customer_app/bl602_sharedApp CONFIG_CHIP_NAME=BL602 CONFIG_LINK_ROM=1 -j
+	mkdir -p output/$(APP_VERSION)
+	cp sdk/OpenBL602/customer_app/bl602_sharedApp/build_out/bl602_sharedApp.bin output/$(APP_VERSION)/OpenBL602_$(APP_VERSION).bin
 
 # clean .o files and output directory
 .PHONY: clean
