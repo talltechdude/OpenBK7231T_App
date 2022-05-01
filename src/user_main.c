@@ -260,6 +260,8 @@ void Main_Init()
 	CFG_InitAndLoad();
 
 	// Automatically turn on CC and CW to 100% at boot
+#if PLATFORM_BK7231T
+
 #define AUTO_ON
 #ifdef AUTO_ON
 	if (CHANNEL_IsInUse(5)) {
@@ -269,6 +271,8 @@ void Main_Init()
   		CHANNEL_Set(1, 100, 0);
   		CHANNEL_Set(2, 100, 0);
 	}
+#endif
+
 #endif
 
 	wifi_ssid = CFG_GetWiFiSSID();
