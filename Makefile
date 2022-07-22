@@ -28,7 +28,11 @@ full: clean all
 # Update/init git submodules
 .PHONY: submodules
 submodules:
+ifdef GITHUB_ACTIONS
+	@echo Submodules already checked out during setup
+else
 	git submodule update --init --recursive --remote
+endif
 
 update-submodules: submodules
 	git add sdk/OpenBK7231T sdk/OpenBK7231N sdk/OpenXR809 sdk/OpenBL602
