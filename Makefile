@@ -57,6 +57,7 @@ sdk/OpenBL602/customer_app/bl602_sharedApp/bl602_sharedApp/shared:
 
 sdk/OpenW800/sharedAppContainer/sharedApp:
 	@echo Create symlink for $(APP_NAME) into sdk folder
+	@mkdir "sdk/OpenW800/sharedAppContainer"
 	ln -s "$(shell pwd)/" "sdk/OpenW800/sharedAppContainer/sharedApp"
 
 # Build main binaries
