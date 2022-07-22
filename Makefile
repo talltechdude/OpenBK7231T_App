@@ -88,11 +88,11 @@ OpenBL602: submodules sdk/OpenBL602/customer_app/bl602_sharedApp/bl602_sharedApp
 	mkdir -p output/$(APP_VERSION)
 	cp sdk/OpenBL602/customer_app/bl602_sharedApp/build_out/bl602_sharedApp.bin output/$(APP_VERSION)/OpenBL602_$(APP_VERSION).bin
 
-sdk/OpenW800/tools/w800/csky/bin: #submodules
+sdk/OpenW800/tools/w800/csky/bin: submodules
 	mkdir -p sdk/OpenW800/tools/w800/csky
 	cd sdk/OpenW800/tools/w800/csky && wget -q "https://occ-oss-prod.oss-cn-hangzhou.aliyuncs.com/resource/1356021/1619529111421/csky-elfabiv2-tools-x86_64-minilibc-20210423.tar.gz" && tar -xf *.tar.gz && rm -f *.tar.gz
 
-OpenW800: sdk/OpenW800/tools/w800/csky/bin sdk/OpenW800/sharedAppContainer/sharedApp
+OpenW800: submodules sdk/OpenW800/tools/w800/csky/bin sdk/OpenW800/sharedAppContainer/sharedApp
 	$(MAKE) -C sdk/OpenW800 EXTRA_CCFLAGS=-DPLATFORM_W800 CONFIG_W800_USE_LIB=n CONFIG_W800_TOOLCHAIN_PATH="$(shell realpath sdk/OpenW800/tools/w800/csky/bin)/"
 	mkdir -p output/$(APP_VERSION)
 	cp sdk/OpenW800/bin/w800/w800.fls output/$(APP_VERSION)/OpenW800_$(APP_VERSION).fls
