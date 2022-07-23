@@ -269,6 +269,37 @@ void Setup_Device_ArlecCCTDownlight() {
 	CFG_Save_SetupTimer();
 }
 
+// https://www.bunnings.com.au/arlec-grid-connect-smart-9w-rgb-cct-led-downlight_p0168695
+void Setup_Device_ArlecRGBCCTDownlight() {
+
+	// WB3L
+	// pins are:
+	// red = PWM1 = P8
+	// green = PWM2 = P7
+	// blue = PWM3 = P9
+	// cold white - PWM4 = P6
+	// warm white - PWM5 = P24
+
+	CFG_ClearPins();
+	// red
+	PIN_SetPinChannelForPinIndex(8, 1);
+	PIN_SetPinRoleForPinIndex(8, IOR_PWM);
+	// green
+	PIN_SetPinChannelForPinIndex(7, 2);
+	PIN_SetPinRoleForPinIndex(7, IOR_PWM);
+	// blue
+	PIN_SetPinChannelForPinIndex(9, 3);
+	PIN_SetPinRoleForPinIndex(9, IOR_PWM);
+	// cold white
+	PIN_SetPinChannelForPinIndex(6, 4);
+	PIN_SetPinRoleForPinIndex(6, IOR_PWM);
+	// warm white
+	PIN_SetPinChannelForPinIndex(24, 5);
+	PIN_SetPinRoleForPinIndex(24, IOR_PWM);
+
+	CFG_Save_SetupTimer();
+}
+
 // https://www.elektroda.pl/rtvforum/topic3804553.html
 // SmartSwitch Nedis WIFIPO120FWT
 void Setup_Device_NedisWIFIPO120FWT_16A() {
