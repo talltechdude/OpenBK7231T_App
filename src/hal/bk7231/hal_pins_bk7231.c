@@ -10,6 +10,8 @@
 #include "../../beken378/driver/i2c/i2c1.h"
 #include "../../beken378/driver/gpio/gpio.h"
 
+#define PWM_FREQ 1000 // PWM pin freqency in Hz
+#define PWM_MINIMUM 10 // Minimum PWM % to avoid low level flicker
 
 static int PIN_GetPWMIndexForPinIndex(int pin) {
 	if(pin == 6)
@@ -88,7 +90,7 @@ void HAL_PIN_PWM_Start(int index) {
 	bk_pwm_start(pwmIndex);
 }
 void HAL_PIN_PWM_Update(int index, int value) {
-	int pwmIndex;
+	int pwmIndex, duty;
 
 	pwmIndex = PIN_GetPWMIndexForPinIndex(index);
 
@@ -96,14 +98,20 @@ void HAL_PIN_PWM_Update(int index, int value) {
 	if(pwmIndex == -1) {
 		return;
 	}
-	if(value<0)
-		value = 0;
-	if(value>100)
-		value = 100;
+	if(value<=0) {
+		duty = 0;
+	} else if (value>=100) {
+		duty = 100;
+	} else {
+		duty = PWM_MINIMUM + value / 100.0f * (100 - PWM_MINIMUM);
+	}
+
+	UINT_T period = (UINT_T) 26000000 / PWM_FREQ;
+	
 #if PLATFORM_BK7231N
-	bk_pwm_update_param(pwmIndex, 1000, value * 10.0f,0,0); // Duty cycle 0...100 * 10.0 = 0...1000
+	bk_pwm_update_param(pwmIndex, period, duty / 100.0f * period,0,0); // Duty cycle 0...100
 #else
-	bk_pwm_update_param(pwmIndex, 1000, value * 10.0f); // Duty cycle 0...100 * 10.0 = 0...1000
+	bk_pwm_update_param(pwmIndex, period, duty / 100.0f * period); // Duty cycle 0...100
 #endif
 }
 
