@@ -57,6 +57,9 @@ jobs:
           echo "::set-output name=short_ref::${BRANCHTRANSLATED}"
           echo "::set-output name=sha_short::SHA-$(git rev-parse --short=12 HEAD)"
           echo "::set-output name=version::${VERSION}"
+      - uses: action-badges/create-orphan-branch@0.1.0
+        with:
+          branch-name: badges          
   build:
     name: Build
     needs: refs
