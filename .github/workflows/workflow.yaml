@@ -59,7 +59,7 @@ jobs:
           echo "::set-output name=version::${VERSION}"
       - name: Ensure Badges branch exists
         run: |
-          export $BRANCH_NAME=badges
+          BRANCH_NAME=badges
 
           # make sure we've got all branches from the remote
           # fetched locally before we call `git show-branch`
