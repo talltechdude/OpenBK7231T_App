@@ -43,11 +43,8 @@ generateNotes:
         - "perf"
         - "fix"
       commitsSort: "header"
-      title: OpenBK7231T/OpenBeken
       headerPartial: |
-        ## {{~#if title}} "{{title}}"
-          {{~/if~}} 
-          OpenBK7231T/OpenBeken {{version}}
+        ## OpenBK7231T/OpenBeken release {{version}}
         
         OpenBK7231T/OpenBeken is a Tasmota/Esphome replacement for new Tuya modules featuring MQTT and Home Assistant compatibility. This repository is named "OpenBK7231T_App", but now it's a multiplatform app, supporting build for multiple separate chips:
 
@@ -85,7 +82,7 @@ generateNotes:
         | [OpenW800_{{version}}_ota.img]({{context.repoUrl}}/../../releases/download/{{version}}/OpenW800_{{version}}_ota.img)       | W800     | OTA Update |
         | [OpenW800_{{version}}.fls]({{context.repoUrl}}/../../releases/download/{{version}}/OpenW800_{{version}}.fls)               | W800     | UART Flash |
 
-        Flashing instructions are available on the project's [README.md]({{repoUrl}}/../..#readme)
+        Flashing instructions are available on the project's [README.md]({{@root.repoUrl}}/../..#readme)
     preset: conventionalcommits
     presetConfig:
       types:
