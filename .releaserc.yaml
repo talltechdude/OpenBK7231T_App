@@ -1,6 +1,6 @@
 branches: 
   - 'main'
-  - name: 'feat/release-notes'
+  - name: 'alpha'
     prerelease: true
 preset: "angular"
 debug: true
