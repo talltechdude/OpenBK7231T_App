@@ -1,5 +1,7 @@
 branches: 
   - 'main'
+  - name: 'release-notes'
+    prerelease: true
 preset: "angular"
 tagFormat: "${version}"
 plugins:
@@ -40,29 +42,76 @@ generateNotes:
         - "perf"
         - "fix"
       commitsSort: "header"
+      headerPartial: |
+        ## {{#if isPatch~}} <small>
+          {{~/if~}} OpenBeken {{version}}
+          {{~#if title}} "{{title}}"
+          {{~/if~}}
+          {{~#if date}} ({{date}})
+          {{~/if~}}
+          {{~#if isPatch~}} </small>
+          {{~/if}}
+        
+        OpenBK7231T/OpenBeken is a Tasmota/Esphome replacement for new Tuya modules featuring MQTT and Home Assistant compatibility. This repository is named "OpenBK7231T_App", but now it's a multiplatform app, supporting build for multiple separate chips:
+
+        - BK7231T (WB3S, WB2S, WB2L, etc)
+        - BK7231N (CB2S, CB2L, WB2L_M1, etc)
+        - T34 (T34 is based on BK7231N)
+        - XR809 (XR3, etc)
+        - BL602
+        - W800 (W800-C400, WinnerMicro WiFi & Bluetooth), W801
+
+      footerPartial: |
+        {{#if noteGroups}}
+        {{#each noteGroups}}
+
+        ### {{title}}
+
+        {{#each notes}}
+        * {{text}}
+        {{/each}}
+        {{/each}}
+        {{/if}}
+        
+        ### Assets
+        Refer to the following table for the usage of the various assests included in this release
+        | Filename  | Platform | Usage |
+        | --- | --- | --- |
+        | [OpenBK7231N_{{version}}.rbl]({{context.repository}}/releases/download/{{version}}/OpenBK7231N_{{version}}.rbl) | BK7231N | OTA Update |
+        | OpenBK7231N_QIO_{{version}}.bin | BK7231N | |
+        | OpenBK7231N_UG_{{version}}.bin | BK7231N | UART Flash |
+        | OpenBK7231T_{{version}}.rbl | BK7231T | OTA Update |
+        | OpenBK7231T_UA_{{version}}.bin | BK7231T | |
+        | OpenBK7231T_UG_{{version}}.bin | BK7231T | UART Flash |
+        | OpenBL602_{{version}}.bin | BL602 | UART Flash |
+        | OpenW800_{{version}}_ota.img | W800 | OTA Update |
+        | OpenW800_{{version}}.fls | W800 | UART Flash |
+
     types:
     - type: "feat"
-    - section: "Features"
+      section: "Features"
     # Tracked bug fix with a hotfix branch
     - type: "hotfix"
-    - section: "Bug Fixes"
+      section: "Bug Fixes"
     # Uninmportent fix (CI testing, etc)
     - type: "fix"
-    - section: "Bug Fixes"
+      section: "Bug Fixes"
     - type: "chore"
-    - section: "Bug Fixes"
+      section: "Bug Fixes"
     - type: "docs"
-    - hidden: true
+      section: "Changes"
     - type: "doc"
-    - hidden: true
+      section: "Changes"
     - type: "style"
-    - hidden: true
+      section: "Changes"
     - type: "refactor"
-    - hidden: true
+      section: "Changes"
     - type: "perf"
-    - hidden: true
+      section: "Changes"
     - type: "test"
-    - hidden: true
+      section: "Changes"
+    - message: "*"
+      section: "Changes"
     presetConfig: true
 prepare:
   - path: "@semantic-release/git"
@@ -72,6 +121,7 @@ publish:
   - path: "@semantic-release/github"
     addReleases: "bottom"
     assets:
+      - path: "CHANGELOG.md"
       - path: "output/**/*_UA_*.bin"
       - path: "output/**/*_UG_*.bin"
       - path: "output/**/*_QIO_*.bin"
