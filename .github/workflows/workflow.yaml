@@ -125,7 +125,7 @@ jobs:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
           badge-branch: badges
           label: ${{ matrix.platform }}
-          message: failed
+          message: build failed
           message-color: red
       - name: Write Badge
         uses: action-badges/core@0.2.2
@@ -134,7 +134,7 @@ jobs:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
           badge-branch: badges
           label: ${{ matrix.platform }}
-          message: passing
+          message: ${{ needs.refs.outputs.version }}
           message-color: green        
       - name: Save build assets
         uses: actions/upload-artifact@v2
