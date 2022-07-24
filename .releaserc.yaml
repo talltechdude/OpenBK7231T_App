@@ -53,7 +53,7 @@ generateNotes:
           {{~/if~}}
           {{~#if isPatch~}} </small>
           {{~/if}}
-        
+        ---
         OpenBK7231T/OpenBeken is a Tasmota/Esphome replacement for new Tuya modules featuring MQTT and Home Assistant compatibility. This repository is named "OpenBK7231T_App", but now it's a multiplatform app, supporting build for multiple separate chips:
 
         - BK7231T (WB3S, WB2S, WB2L, etc)
@@ -77,17 +77,20 @@ generateNotes:
 
         ### Assets
         Refer to the following table for the usage of the various assests included in this release
-        | Filename  | Platform | Usage |
-        | --- | --- | --- |
-        | [OpenBK7231N_{{version}}.rbl]({{context.repoUrl}}/releases/download/{{version}}/OpenBK7231N_{{version}}.rbl) | BK7231N | OTA Update |
-        | OpenBK7231N_QIO_{{version}}.bin | BK7231N | |
-        | OpenBK7231N_UG_{{version}}.bin | BK7231N | UART Flash |
-        | OpenBK7231T_{{version}}.rbl | BK7231T | OTA Update |
-        | OpenBK7231T_UA_{{version}}.bin | BK7231T | |
-        | OpenBK7231T_UG_{{version}}.bin | BK7231T | UART Flash |
-        | OpenBL602_{{version}}.bin | BL602 | UART Flash |
-        | OpenW800_{{version}}_ota.img | W800 | OTA Update |
-        | OpenW800_{{version}}.fls | W800 | UART Flash |
+        | Filename                                                                                                             | Platform | Usage      |
+        | ---                                                                                                                  | ---      | ---        |
+        | [OpenBK7231T_{{version}}.rbl]({{context.repoUrl}}/releases/download/{{version}}/OpenBK7231T_{{version}}.rbl)         | BK7231T  | OTA Update |
+        | [OpenBK7231T_UG_{{version}}.bin]({{context.repoUrl}}/releases/download/{{version}}/OpenBK7231T_UG_{{version}}.bin)   | BK7231T  | UART Flash |
+        | [OpenBK7231T_UA_{{version}}.bin]({{context.repoUrl}}/releases/download/{{version}}/OpenBK7231T_UA_{{version}}.bin)   | BK7231T  |            |
+        | [OpenBK7231N_{{version}}.rbl]({{context.repoUrl}}/releases/download/{{version}}/OpenBK7231N_{{version}}.rbl)         | BK7231N  | OTA Update |
+        | [OpenBK7231N_UG_{{version}}.bin]({{context.repoUrl}}/releases/download/{{version}}/OpenBK7231N_UG_{{version}}.bin)   | BK7231N  | UART Flash |
+        | [OpenBK7231N_QIO_{{version}}.bin]({{context.repoUrl}}/releases/download/{{version}}/OpenBK7231N_QIO_{{version}}.bin) | BK7231N  |            |
+        | [OpenXR809_{{version}}.img]({{context.repoUrl}}/releases/download/{{version}}/OpenXR809_{{version}}.img)             | XR809    |            |
+        | [OpenBL602_{{version}}.bin]({{context.repoUrl}}/releases/download/{{version}}/OpenBL602_{{version}}.bin)             | BL602    | UART Flash |
+        | [OpenW800_{{version}}_ota.img]({{context.repoUrl}}/releases/download/{{version}}/OpenW800_{{version}}_ota.img)       | W800     | OTA Update |
+        | [OpenW800_{{version}}.fls]({{context.repoUrl}}/releases/download/{{version}}/OpenW800_{{version}}.fls)               | W800     | UART Flash |
+
+        Flashing instructions are available on the project's [README.md]({{context.repoUrl}})
 
     types:
     - type: "feat"
