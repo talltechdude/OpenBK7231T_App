@@ -82,6 +82,25 @@ jobs:
       - run: ls -la
       - name: Run make
         run: make APP_VERSION=${{ needs.refs.outputs.version }} APP_NAME=${{ matrix.platform }} ${{ matrix.platform }}
+      - name: Write Failed Badge
+        uses: action-badges/core@0.2.2
+        if: ${{ failure() }}
+        with:
+          file-name: build-${{ matrix.platform }}.svg
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          badge-branch: badges
+          label: ${{ matrix.platform }}
+          message: failed
+          message-color: red
+      - name: Write Badge
+        uses: action-badges/core@0.2.2
+        with:
+          file-name: build-${{ matrix.platform }}.svg
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          badge-branch: badges
+          label: ${{ matrix.platform }}
+          message: passing
+          message-color: green        
       - name: Save build assets
         uses: actions/upload-artifact@v2
         with:

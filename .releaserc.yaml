@@ -43,9 +43,10 @@ generateNotes:
         - "perf"
         - "fix"
       commitsSort: "header"
+      title: OpenBK7231T/OpenBeken
       headerPartial: |
         ## {{#if isPatch~}} <small>
-          {{~/if~}} OpenBeken {{version}}
+          {{~/if~}} {{version}}
           {{~#if title}} "{{title}}"
           {{~/if~}}
           {{~#if date}} ({{date}})
