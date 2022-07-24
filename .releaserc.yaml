@@ -3,6 +3,7 @@ branches:
   - name: 'feat/release-notes'
     prerelease: true
 preset: "angular"
+debug: true
 tagFormat: "${version}"
 plugins:
   - "@semantic-release/commit-analyzer"
