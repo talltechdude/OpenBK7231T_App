@@ -77,56 +77,53 @@ generateNotes:
 
         ### Assets
         Refer to the following table for the usage of the various assests included in this release
-        | Filename                                                                                                             | Platform | Usage      |
-        | ---                                                                                                                  | ---      | ---        |
-        | [OpenBK7231T_{{version}}.rbl]({{context.repoUrl}}/releases/download/{{version}}/OpenBK7231T_{{version}}.rbl)         | BK7231T  | OTA Update |
-        | [OpenBK7231T_UG_{{version}}.bin]({{context.repoUrl}}/releases/download/{{version}}/OpenBK7231T_UG_{{version}}.bin)   | BK7231T  | UART Flash |
-        | [OpenBK7231T_UA_{{version}}.bin]({{context.repoUrl}}/releases/download/{{version}}/OpenBK7231T_UA_{{version}}.bin)   | BK7231T  |            |
-        | [OpenBK7231N_{{version}}.rbl]({{context.repoUrl}}/releases/download/{{version}}/OpenBK7231N_{{version}}.rbl)         | BK7231N  | OTA Update |
-        | [OpenBK7231N_UG_{{version}}.bin]({{context.repoUrl}}/releases/download/{{version}}/OpenBK7231N_UG_{{version}}.bin)   | BK7231N  | UART Flash |
-        | [OpenBK7231N_QIO_{{version}}.bin]({{context.repoUrl}}/releases/download/{{version}}/OpenBK7231N_QIO_{{version}}.bin) | BK7231N  |            |
-        | [OpenXR809_{{version}}.img]({{context.repoUrl}}/releases/download/{{version}}/OpenXR809_{{version}}.img)             | XR809    |            |
-        | [OpenBL602_{{version}}.bin]({{context.repoUrl}}/releases/download/{{version}}/OpenBL602_{{version}}.bin)             | BL602    | UART Flash |
-        | [OpenW800_{{version}}_ota.img]({{context.repoUrl}}/releases/download/{{version}}/OpenW800_{{version}}_ota.img)       | W800     | OTA Update |
-        | [OpenW800_{{version}}.fls]({{context.repoUrl}}/releases/download/{{version}}/OpenW800_{{version}}.fls)               | W800     | UART Flash |
+        | Filename                                                                                                                   | Platform | Usage      |
+        | ---                                                                                                                        | ---      | ---        |
+        | [OpenBK7231T_{{version}}.rbl]({{context.repoUrl}}/../../releases/download/{{version}}/OpenBK7231T_{{version}}.rbl)         | BK7231T  | OTA Update |
+        | [OpenBK7231T_UG_{{version}}.bin]({{context.repoUrl}}/../../releases/download/{{version}}/OpenBK7231T_UG_{{version}}.bin)   | BK7231T  | UART Flash |
+        | [OpenBK7231T_UA_{{version}}.bin]({{context.repoUrl}}/../../releases/download/{{version}}/OpenBK7231T_UA_{{version}}.bin)   | BK7231T  |            |
+        | [OpenBK7231N_{{version}}.rbl]({{context.repoUrl}}/../../releases/download/{{version}}/OpenBK7231N_{{version}}.rbl)         | BK7231N  | OTA Update |
+        | [OpenBK7231N_UG_{{version}}.bin]({{context.repoUrl}}/../../releases/download/{{version}}/OpenBK7231N_UG_{{version}}.bin)   | BK7231N  | UART Flash |
+        | [OpenBK7231N_QIO_{{version}}.bin]({{context.repoUrl}}/../../releases/download/{{version}}/OpenBK7231N_QIO_{{version}}.bin) | BK7231N  | SPI Flash  |
+        | [OpenXR809_{{version}}.img]({{context.repoUrl}}/../../releases/download/{{version}}/OpenXR809_{{version}}.img)             | XR809    |            |
+        | [OpenBL602_{{version}}.bin]({{context.repoUrl}}/../../releases/download/{{version}}/OpenBL602_{{version}}.bin)             | BL602    | UART Flash |
+        | [OpenW800_{{version}}_ota.img]({{context.repoUrl}}/../../releases/download/{{version}}/OpenW800_{{version}}_ota.img)       | W800     | OTA Update |
+        | [OpenW800_{{version}}.fls]({{context.repoUrl}}/../../releases/download/{{version}}/OpenW800_{{version}}.fls)               | W800     | UART Flash |
 
-        Flashing instructions are available on the project's [README.md]({{context.repoUrl}})
+        Flashing instructions are available on the project's [README.md]({{context.repoUrl}}/../..)
 
-    types:
-    - type: "feat"
-      section: "Features"
-    # Tracked bug fix with a hotfix branch
-    - type: "hotfix"
-      section: "Bug Fixes"
-    # Uninmportent fix (CI testing, etc)
-    - type: "fix"
-      section: "Bug Fixes"
-    - type: "chore"
-      section: "Bug Fixes"
-    - type: "docs"
-      section: "Changes"
-    - type: "doc"
-      section: "Changes"
-    - type: "style"
-      section: "Changes"
-    - type: "refactor"
-      section: "Changes"
-    - type: "perf"
-      section: "Changes"
-    - type: "test"
-      section: "Changes"
-    - message: "*"
-      section: "Changes"
+      types:
+      - type: "feat"
+        section: "Features"
+      # Tracked bug fix with a hotfix branch
+      - type: "hotfix"
+        section: "Bug Fixes"
+      # Uninmportent fix (CI testing, etc)
+      - type: "fix"
+        section: "Bug Fixes"
+      - type: "chore"
+        section: "Bug Fixes"
+      - type: "docs"
+        section: "Changes"
+      - type: "doc"
+        section: "Changes"
+      - type: "style"
+        section: "Changes"
+      - type: "refactor"
+        section: "Changes"
+      - type: "perf"
+        section: "Changes"
+      - type: "test"
+        section: "Changes"
+      - message: "*"
+        section: "Changes"
     presetConfig: true
 prepare:
   - path: "@semantic-release/git"
-  - path: "@semantic-release/changelog"
-    changelogFile: "CHANGELOG.md"
 publish:
   - path: "@semantic-release/github"
     addReleases: "bottom"
     assets:
-      - path: "CHANGELOG.md"
       - path: "output/**/*_UA_*.bin"
       - path: "output/**/*_UG_*.bin"
       - path: "output/**/*_QIO_*.bin"
