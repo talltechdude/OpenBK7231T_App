@@ -45,6 +45,10 @@ generateNotes:
       commitsSort: "header"
       title: OpenBK7231T/OpenBeken
       headerPartial: |
+        ## {{~#if title}} "{{title}}"
+          {{~/if~}} 
+          OpenBK7231T/OpenBeken {{version}}
+        
         OpenBK7231T/OpenBeken is a Tasmota/Esphome replacement for new Tuya modules featuring MQTT and Home Assistant compatibility. This repository is named "OpenBK7231T_App", but now it's a multiplatform app, supporting build for multiple separate chips:
 
         - BK7231T (WB3S, WB2S, WB2L, etc)
@@ -81,43 +85,43 @@ generateNotes:
         | [OpenW800_{{version}}_ota.img]({{context.repoUrl}}/../../releases/download/{{version}}/OpenW800_{{version}}_ota.img)       | W800     | OTA Update |
         | [OpenW800_{{version}}.fls]({{context.repoUrl}}/../../releases/download/{{version}}/OpenW800_{{version}}.fls)               | W800     | UART Flash |
 
-        Flashing instructions are available on the project's [README.md]({{context.repoUrl}}/../..#readme)
-
+        Flashing instructions are available on the project's [README.md]({{repoUrl}}/../..#readme)
+    preset: conventionalcommits
+    presetConfig:
       types:
-      - type: "feat"
-        section: "Features"
-      # Tracked bug fix with a hotfix branch
-      - type: "hotfix"
-        section: "Bug Fixes"
-      # Uninmportent fix (CI testing, etc)
-      - type: "fix"
-        section: "Bug Fixes"
-        hidden: false
-      - type: "chore"
-        section: "Bug Fixes"
-        hidden: false
-      - type: "docs"
-        section: "Changes"
-        hidden: false
-      - type: "doc"
-        section: "Changes"
-        hidden: false
-      - type: "style"
-        section: "Changes"
-        hidden: false
-      - type: "refactor"
-        section: "Changes"
-        hidden: false
-      - type: "perf"
-        section: "Changes"
-        hidden: false
-      - type: "test"
-        section: "Changes"
-        hidden: false
-      - message: "*"
-        section: "Changes"
-        hidden: false
-    presetConfig: true
+        - type: "feat"
+          section: "Features"
+        # Tracked bug fix with a hotfix branch
+        - type: "hotfix"
+          section: "Bug Fixes"
+        # Uninmportent fix (CI testing, etc)
+        - type: "fix"
+          section: "Bug Fixes"
+          hidden: false
+        - type: "chore"
+          section: "Bug Fixes"
+          hidden: false
+        - type: "docs"
+          section: "Changes"
+          hidden: false
+        - type: "doc"
+          section: "Changes"
+          hidden: false
+        - type: "style"
+          section: "Changes"
+          hidden: false
+        - type: "refactor"
+          section: "Changes"
+          hidden: false
+        - type: "perf"
+          section: "Changes"
+          hidden: false
+        - type: "test"
+          section: "Changes"
+          hidden: false
+        - message: "*"
+          section: "Changes"
+          hidden: false
 prepare:
   - path: "@semantic-release/git"
 publish:
