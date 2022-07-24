@@ -81,7 +81,7 @@ generateNotes:
         | [OpenW800_{{version}}_ota.img]({{context.repoUrl}}/../../releases/download/{{version}}/OpenW800_{{version}}_ota.img)       | W800     | OTA Update |
         | [OpenW800_{{version}}.fls]({{context.repoUrl}}/../../releases/download/{{version}}/OpenW800_{{version}}.fls)               | W800     | UART Flash |
 
-        Flashing instructions are available on the project's [README.md]({{context.repoUrl}}/../..)
+        Flashing instructions are available on the project's [README.md]({{context.repoUrl}}/../..#readme)
 
       types:
       - type: "feat"
@@ -92,22 +92,31 @@ generateNotes:
       # Uninmportent fix (CI testing, etc)
       - type: "fix"
         section: "Bug Fixes"
+        hidden: false
       - type: "chore"
         section: "Bug Fixes"
+        hidden: false
       - type: "docs"
         section: "Changes"
+        hidden: false
       - type: "doc"
         section: "Changes"
+        hidden: false
       - type: "style"
         section: "Changes"
+        hidden: false
       - type: "refactor"
         section: "Changes"
+        hidden: false
       - type: "perf"
         section: "Changes"
+        hidden: false
       - type: "test"
         section: "Changes"
+        hidden: false
       - message: "*"
         section: "Changes"
+        hidden: false
     presetConfig: true
 prepare:
   - path: "@semantic-release/git"
