@@ -1,6 +1,6 @@
 branches: 
   - 'main'
-  - name: 'release-notes'
+  - name: 'feat/release-notes'
     prerelease: true
 preset: "angular"
 tagFormat: "${version}"
@@ -72,7 +72,7 @@ generateNotes:
         {{/each}}
         {{/each}}
         {{/if}}
-        
+
         ### Assets
         Refer to the following table for the usage of the various assests included in this release
         | Filename  | Platform | Usage |
