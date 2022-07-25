@@ -100,7 +100,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [OpenBK7231T, OpenBK7231N, OpenXR809, OpenBL602]
+        platform: [OpenBK7231T, OpenBK7231N, OpenXR809, OpenBL602, OpenW800]
     steps:
       - name: Source checkout
         uses: actions/checkout@v2
@@ -120,16 +120,17 @@ jobs:
         run: make APP_VERSION=${{ needs.refs.outputs.version }} APP_NAME=${{ matrix.platform }} ${{ matrix.platform }}
       - name: Write Failed Badge
         uses: action-badges/core@0.2.2
-        if: ${{ failure() }}
+        if: failure() && needs.refs.outputs.new_release == 'true' && (github.ref == 'refs/heads/main' || github.ref_name == 'alpha')
         with:
           file-name: build-${{ matrix.platform }}.svg
           github-token: "${{ secrets.GITHUB_TOKEN }}"
           badge-branch: badges
           label: ${{ matrix.platform }}
-          message: build failed
+          message: build failing
           message-color: red
       - name: Write Badge
         uses: action-badges/core@0.2.2
+        if: needs.refs.outputs.new_release == 'true' && (github.ref == 'refs/heads/main' || github.ref_name == 'alpha')
         with:
           file-name: build-${{ matrix.platform }}.svg
           github-token: "${{ secrets.GITHUB_TOKEN }}"
@@ -149,6 +150,8 @@ jobs:
             output/${{ needs.refs.outputs.version }}/${{ matrix.platform }}_${{ needs.refs.outputs.version }}.rbl
             output/${{ needs.refs.outputs.version }}/${{ matrix.platform }}_${{ needs.refs.outputs.version }}.img
             output/${{ needs.refs.outputs.version }}/${{ matrix.platform }}_${{ needs.refs.outputs.version }}.bin
+            output/${{ needs.refs.outputs.version }}/${{ matrix.platform }}_${{ needs.refs.outputs.version }}.fls
+            output/${{ needs.refs.outputs.version }}/${{ matrix.platform }}_${{ needs.refs.outputs.version }}_ota.img
           if-no-files-found: warn
 
   release:
